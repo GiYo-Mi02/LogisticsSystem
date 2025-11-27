@@ -1,0 +1,119 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// User Hierarchy (Single Table Inheritance or separate tables? 
+// Prisma handles polymorphism best with optional fields or separate tables.
+// We'll use a discriminator for simplicity in this demo, or separate tables if strict separation is needed.
+// For this project, we'll use a single User table with a role discriminator.)
+
+enum UserRole {
+  CUSTOMER
+  DRIVER
+  ADMIN
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String
+  password  String   // Hashed
+  role      UserRole
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Customer specific
+  shipments Shipment[] @relation("CustomerShipments")
+
+  // Driver specific
+  currentVehicleId String?  @unique
+  currentVehicle   Vehicle? @relation(fields: [currentVehicleId], references: [id])
+  assignedJobs     Shipment[] @relation("DriverShipments")
+
+  @@index([email])
+}
+
+// Vehicle Hierarchy
+enum VehicleType {
+  DRONE
+  TRUCK
+  SHIP
+}
+
+model Vehicle {
+  id          String      @id @default(uuid())
+  licenseId   String      @unique
+  type        VehicleType
+  capacity    Float
+  currentFuel Float
+  status      String      @default("IDLE") // IDLE, IN_TRANSIT, MAINTENANCE
+  
+  // Location
+  latitude    Float?
+  longitude   Float?
+
+  // Drone specific
+  maxAltitude Float?
+
+  // Truck specific
+  numberOfAxles Int?
+
+  // Driver relation
+  driver      User?
+
+  // Shipments
+  currentShipmentId String?   @unique
+  currentShipment   Shipment? @relation(fields: [currentShipmentId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Shipment
+enum ShipmentStatus {
+  PENDING
+  ASSIGNED
+  IN_TRANSIT
+  DELIVERED
+  CANCELLED
+}
+
+model Shipment {
+  id          String         @id @default(uuid())
+  trackingId  String         @unique
+  weight      Float
+  status      ShipmentStatus @default(PENDING)
+  
+  // Locations
+  originLat   Float
+  originLng   Float
+  destLat     Float
+  destLng     Float
+  
+  // Cost
+  cost        Float?
+  
+  // Relations
+  customerId  String
+  customer    User    @relation("CustomerShipments", fields: [customerId], references: [id])
+  
+  driverId    String?
+  driver      User?   @relation("DriverShipments", fields: [driverId], references: [id])
+  
+  vehicle     Vehicle?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([trackingId])
+  @@index([customerId])
+}
