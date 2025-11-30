@@ -93,11 +93,19 @@ model Shipment {
   weight      Float
   status      ShipmentStatus @default(PENDING)
   
-  // Locations
-  originLat   Float
-  originLng   Float
-  destLat     Float
-  destLng     Float
+  // Origin Location (human-readable + coordinates)
+  originAddress String?
+  originCity    String?
+  originCountry String?
+  originLat     Float
+  originLng     Float
+  
+  // Destination Location (human-readable + coordinates)
+  destAddress   String?
+  destCity      String?
+  destCountry   String?
+  destLat       Float
+  destLng       Float
   
   // Cost
   cost        Float?

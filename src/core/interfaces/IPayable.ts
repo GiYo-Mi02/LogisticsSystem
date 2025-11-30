@@ -39,7 +39,7 @@ export interface PaymentResult {
 export interface PaymentRecord {
     transactionId: string;
     amount: number;
-    type: 'CHARGE' | 'REFUND';
+    type: 'CHARGE' | 'REFUND' | 'PAYMENT';
     status: 'COMPLETED' | 'PENDING' | 'FAILED';
     timestamp: Date;
 }

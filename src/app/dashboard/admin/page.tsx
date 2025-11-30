@@ -30,7 +30,14 @@ export default function AdminDashboard() {
     const [vehicles, setVehicles] = useState<Vehicle[]>([]);
     const [recentShipments, setRecentShipments] = useState<Shipment[]>([]);
     const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
-    const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
+    const [lastUpdateTime, setLastUpdateTime] = useState<string>('--:--:--');
+    const [isMounted, setIsMounted] = useState(false);
+
+    // Handle client-side mounting to avoid hydration issues
+    useEffect(() => {
+        setIsMounted(true);
+        setLastUpdateTime(new Date().toLocaleTimeString());
+    }, []);
 
     const fetchStats = useCallback(async () => {
         try {
@@ -39,11 +46,13 @@ export default function AdminDashboard() {
             setStats(data);
             setVehicles(data.vehicles || []);
             setRecentShipments(data.recentShipments || []);
-            setLastUpdate(new Date());
+            if (isMounted) {
+                setLastUpdateTime(new Date().toLocaleTimeString());
+            }
         } catch (error) {
             console.error('Failed to fetch admin stats', error);
         }
-    }, []);
+    }, [isMounted]);
 
     // Real-time connection
     const { isConnected } = useRealtime({
@@ -53,7 +62,7 @@ export default function AdminDashboard() {
             setVehicles(prev => prev.map(v => 
                 v.id === event.data.id ? { ...v, ...event.data } : v
             ));
-            setLastUpdate(new Date());
+            setLastUpdateTime(new Date().toLocaleTimeString());
         },
         onNewShipment: () => fetchStats(),
         onAssignmentUpdate: () => fetchStats(),
@@ -61,7 +70,7 @@ export default function AdminDashboard() {
             if (event.data.totalShipments) {
                 setStats((prev: any) => ({ ...prev, totalShipments: event.data.totalShipments }));
             }
-            setLastUpdate(new Date());
+            setLastUpdateTime(new Date().toLocaleTimeString());
         }
     });
 
@@ -129,7 +138,7 @@ export default function AdminDashboard() {
                                 </span>
                             </div>
                             <p className="text-xs text-gray-500 font-mono">
-                                Last Update: {lastUpdate.toLocaleTimeString()}
+                                Last Update: {lastUpdateTime}
                             </p>
                         </div>
                     </div>

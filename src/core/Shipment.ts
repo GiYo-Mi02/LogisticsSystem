@@ -4,7 +4,7 @@ import { Vehicle } from './Vehicle';
 import { User } from './User';
 import { BaseEntity } from './base/BaseEntity';
 import { ITrackable, TrackingEvent } from './interfaces/ITrackable';
-import { IPayable, PaymentRecord } from './interfaces/IPayable';
+import { IPayable, PaymentRecord, PaymentResult } from './interfaces/IPayable';
 
 /**
  * ============================================================================
@@ -345,53 +345,76 @@ export class Shipment extends BaseEntity implements ITrackable, IPayable {
 
     // ==================== IPayable Implementation ====================
 
-    public processPayment(amount: number, method: string): PaymentRecord {
+    /**
+     * Process payment for the shipment
+     * Returns a Promise to comply with IPayable interface
+     */
+    public async processPayment(amount: number): Promise<PaymentResult> {
         if (amount <= 0) {
             throw new Error('Payment amount must be positive');
         }
 
+        // Simulate async payment processing
+        const transactionId = `TXN-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        
         const record: PaymentRecord = {
-            id: `PAY-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            transactionId,
             amount,
-            method,
             timestamp: new Date(),
-            status: 'completed',
+            status: 'COMPLETED',
+            type: 'PAYMENT',
         };
 
         this._paymentHistory.push(record);
         this.touch();
-        console.log(`Payment of $${amount} processed for shipment ${this._trackingId}`);
-        this.addTrackingEvent(`Payment received: $${amount} via ${method}`, this.getCurrentLocation());
+        console.log(`Payment of ${amount} processed for shipment ${this._trackingId}`);
+        this.addTrackingEvent(`Payment received: ${amount}`, this.getCurrentLocation());
 
-        return record;
+        return {
+            success: true,
+            transactionId,
+            amount,
+            timestamp: new Date(),
+            message: 'Payment processed successfully',
+        };
     }
 
-    public refund(paymentId: string, amount?: number): PaymentRecord {
-        const originalPayment = this._paymentHistory.find(p => p.id === paymentId);
+    /**
+     * Refund a payment
+     * Returns a Promise to comply with IPayable interface
+     */
+    public async refund(transactionId: string, amount: number): Promise<PaymentResult> {
+        const originalPayment = this._paymentHistory.find(p => p.transactionId === transactionId);
         if (!originalPayment) {
-            throw new Error(`Payment ${paymentId} not found`);
+            throw new Error(`Payment ${transactionId} not found`);
         }
 
-        const refundAmount = amount ?? originalPayment.amount;
-        if (refundAmount > originalPayment.amount) {
+        if (amount > originalPayment.amount) {
             throw new Error('Refund amount cannot exceed original payment');
         }
 
+        const refundTransactionId = `REF-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
         const refundRecord: PaymentRecord = {
-            id: `REF-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-            amount: -refundAmount,
-            method: originalPayment.method,
+            transactionId: refundTransactionId,
+            amount: -amount,
             timestamp: new Date(),
-            status: 'refunded',
-            refundedPaymentId: paymentId,
+            status: 'COMPLETED',
+            type: 'REFUND',
         };
 
         this._paymentHistory.push(refundRecord);
         this.touch();
-        console.log(`Refund of $${refundAmount} processed for shipment ${this._trackingId}`);
-        this.addTrackingEvent(`Refund issued: $${refundAmount}`, this.getCurrentLocation());
+        console.log(`Refund of ${amount} processed for shipment ${this._trackingId}`);
+        this.addTrackingEvent(`Refund issued: ${amount}`, this.getCurrentLocation());
 
-        return refundRecord;
+        return {
+            success: true,
+            transactionId: refundTransactionId,
+            amount: -amount,
+            timestamp: new Date(),
+            message: 'Refund processed successfully',
+        };
     }
 
     public getPaymentHistory(): PaymentRecord[] {
@@ -444,3 +467,6 @@ export class Shipment extends BaseEntity implements ITrackable, IPayable {
         });
     }
 }
+
+
+

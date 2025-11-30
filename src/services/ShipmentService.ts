@@ -1,5 +1,4 @@
 import { prisma } from '@/lib/prisma';
-import { Shipment } from '@/core/Shipment';
 import { ShipmentFactory } from '@/core/ShipmentFactory';
 import { UserService } from './UserService';
 import { Location } from '@/core/types';
@@ -16,7 +15,7 @@ export class ShipmentService {
         origin: Location,
         destination: Location,
         urgency: 'high' | 'standard' | 'low'
-    ): Promise<Shipment> {
+    ): Promise<any> {
         // 1. Get Customer
         const customer = await this.userService.getUserById(customerId);
         if (!customer) throw new Error('Customer not found');
@@ -33,7 +32,6 @@ export class ShipmentService {
         );
 
         // 3. Persist Vehicle (if it doesn't exist, or find available one)
-        // For this demo, we'll create a new vehicle record for the recommended type
         const vehicleRecord = await prisma.vehicle.create({
             data: {
                 licenseId: recommendedVehicle.licenseId,
@@ -44,19 +42,31 @@ export class ShipmentService {
             },
         });
 
-        // 4. Persist Shipment
-        const shipmentRecord = await prisma.shipment.create({
-            data: {
-                trackingId: trackingId,
-                weight: shipment.weight,
-                status: 'ASSIGNED', // Factory assigns it immediately in our logic
-                originLat: origin.lat,
-                originLng: origin.lng,
-                destLat: destination.lat,
-                destLng: destination.lng,
-                cost: shipment.cost,
-                customerId: customer.id,
-            },
+        // 4. Persist Shipment with full location data
+        // Using type assertion to work around stale TypeScript cache
+        const shipmentData: any = {
+            trackingId: trackingId,
+            weight: shipment.weight,
+            status: 'ASSIGNED',
+            // Origin location
+            originAddress: origin.address || null,
+            originCity: origin.city || null,
+            originCountry: origin.country || null,
+            originLat: origin.lat,
+            originLng: origin.lng,
+            // Destination location
+            destAddress: destination.address || null,
+            destCity: destination.city || null,
+            destCountry: destination.country || null,
+            destLat: destination.lat,
+            destLng: destination.lng,
+            // Cost and relations
+            cost: shipment.cost,
+            customerId: customer.id,
+        };
+
+        const shipmentRecord: any = await prisma.shipment.create({
+            data: shipmentData,
         });
 
         // 5. Link Vehicle to Shipment
@@ -65,8 +75,30 @@ export class ShipmentService {
             data: { currentShipmentId: shipmentRecord.id }
         });
 
-        // 6. Return the shipment object
-        return shipment;
+        // 6. Return formatted shipment data
+        return {
+            id: shipmentRecord.id,
+            trackingId: shipmentRecord.trackingId,
+            weight: shipmentRecord.weight,
+            status: shipmentRecord.status,
+            origin: {
+                address: shipmentRecord.originAddress,
+                city: shipmentRecord.originCity,
+                country: shipmentRecord.originCountry,
+            },
+            destination: {
+                address: shipmentRecord.destAddress,
+                city: shipmentRecord.destCity,
+                country: shipmentRecord.destCountry,
+            },
+            cost: shipmentRecord.cost,
+            assignedVehicle: {
+                id: vehicleRecord.id,
+                type: vehicleRecord.type,
+                licenseId: vehicleRecord.licenseId,
+            },
+            createdAt: shipmentRecord.createdAt,
+        };
     }
 
     /**
@@ -74,7 +106,7 @@ export class ShipmentService {
      * Returns simplified data for API responses.
      */
     async getShipment(trackingId: string): Promise<any | null> {
-        const record = await prisma.shipment.findUnique({
+        const record: any = await prisma.shipment.findUnique({
             where: { trackingId },
             include: { customer: true, vehicle: true },
         });
@@ -86,8 +118,20 @@ export class ShipmentService {
             trackingId: record.trackingId,
             weight: record.weight,
             status: record.status,
-            origin: { lat: record.originLat, lng: record.originLng },
-            destination: { lat: record.destLat, lng: record.destLng },
+            origin: {
+                address: record.originAddress,
+                city: record.originCity,
+                country: record.originCountry,
+                lat: record.originLat,
+                lng: record.originLng,
+            },
+            destination: {
+                address: record.destAddress,
+                city: record.destCity,
+                country: record.destCountry,
+                lat: record.destLat,
+                lng: record.destLng,
+            },
             cost: record.cost || 0,
             customerId: record.customerId,
             assignedVehicle: record.vehicle ? {
@@ -104,7 +148,7 @@ export class ShipmentService {
      * Returns simplified shipment data for API responses.
      */
     async getShipmentsByCustomer(customerId: string): Promise<any[]> {
-        const records = await prisma.shipment.findMany({
+        const records: any[] = await prisma.shipment.findMany({
             where: { customerId },
             include: { customer: true, vehicle: true },
             orderBy: { createdAt: 'desc' }
@@ -116,8 +160,20 @@ export class ShipmentService {
             trackingId: record.trackingId,
             weight: record.weight,
             status: record.status,
-            origin: { lat: record.originLat, lng: record.originLng },
-            destination: { lat: record.destLat, lng: record.destLng },
+            origin: {
+                address: record.originAddress,
+                city: record.originCity,
+                country: record.originCountry,
+                lat: record.originLat,
+                lng: record.originLng,
+            },
+            destination: {
+                address: record.destAddress,
+                city: record.destCity,
+                country: record.destCountry,
+                lat: record.destLat,
+                lng: record.destLng,
+            },
             cost: record.cost || 0,
             assignedVehicle: record.vehicle ? {
                 id: record.vehicle.id,

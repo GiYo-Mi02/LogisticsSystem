@@ -172,7 +172,7 @@ class ShipFactory extends AbstractVehicleFactory {
 export class ShipmentFactory {
     // ENCAPSULATION: Private static counters and configurations
     private static shipmentCounter: number = 0;
-    private static readonly VEHICLE_FACTORIES: Map<VehicleType, IVehicleFactory> = new Map([
+    private static readonly VEHICLE_FACTORIES: Map<VehicleType, IVehicleFactory> = new Map<VehicleType, IVehicleFactory>([
         [VehicleType.DRONE, new DroneFactory()],
         [VehicleType.TRUCK, new TruckFactory()],
         [VehicleType.SHIP, new ShipFactory()],

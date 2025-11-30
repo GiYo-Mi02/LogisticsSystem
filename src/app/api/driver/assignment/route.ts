@@ -97,8 +97,25 @@ export async function POST(request: Request) {
             }, { status: 400 });
         }
 
-        // If vehicle has an old completed shipment, clear it first
-        if (driver.currentVehicle?.currentShipmentId) {
+        // CRITICAL FIX: Check if shipment is already assigned to another vehicle
+        const existingVehicle = await prisma.vehicle.findUnique({
+            where: { currentShipmentId: shipmentId }
+        });
+
+        // If shipment is linked to another vehicle, clear it first
+        if (existingVehicle && existingVehicle.id !== driver.currentVehicle?.id) {
+            await prisma.vehicle.update({
+                where: { id: existingVehicle.id },
+                data: { 
+                    currentShipmentId: null,
+                    status: 'IDLE'
+                }
+            });
+        }
+
+        // If driver's vehicle has an old completed shipment, clear it
+        if (driver.currentVehicle?.currentShipmentId && 
+            driver.currentVehicle.currentShipmentId !== shipmentId) {
             await prisma.vehicle.update({
                 where: { id: driver.currentVehicle.id },
                 data: { currentShipmentId: null }
@@ -130,7 +147,11 @@ export async function POST(request: Request) {
         emitShipmentUpdate(updatedShipment);
         emitAssignmentUpdate({ driverId, shipment: updatedShipment });
         if (driver.currentVehicle) {
-            emitVehicleUpdate({ ...driver.currentVehicle, status: 'IN_TRANSIT', currentShipmentId: shipmentId });
+            emitVehicleUpdate({ 
+                ...driver.currentVehicle, 
+                status: 'IN_TRANSIT', 
+                currentShipmentId: shipmentId 
+            });
         }
 
         return NextResponse.json({ 

@@ -144,17 +144,27 @@ export default function CustomerDashboard() {
                             <div className="text-center text-gray-500 py-12 glass-panel rounded-xl">No active missions found. Initiate a new shipment.</div>
                         ) : (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {shipments.map((shipment) => (
-                                    <ShipmentCard
-                                        key={shipment.trackingId}
-                                        id={shipment.trackingId}
-                                        status={shipment.status}
-                                        origin={`${shipment.origin.lat.toFixed(2)}, ${shipment.origin.lng.toFixed(2)}`}
-                                        destination={`${shipment.destination.lat.toFixed(2)}, ${shipment.destination.lng.toFixed(2)}`}
-                                        vehicleType={shipment.assignedVehicle?.type}
-                                        cost={shipment.cost}
-                                    />
-                                ))}
+                                {shipments.map((shipment) => {
+                                    // Format location display - prefer city names, fallback to coordinates
+                                    const originDisplay = shipment.origin.city && shipment.origin.country
+                                        ? `${shipment.origin.city}, ${shipment.origin.country}`
+                                        : `${shipment.origin.lat.toFixed(2)}, ${shipment.origin.lng.toFixed(2)}`;
+                                    const destDisplay = shipment.destination.city && shipment.destination.country
+                                        ? `${shipment.destination.city}, ${shipment.destination.country}`
+                                        : `${shipment.destination.lat.toFixed(2)}, ${shipment.destination.lng.toFixed(2)}`;
+                                    
+                                    return (
+                                        <ShipmentCard
+                                            key={shipment.trackingId}
+                                            id={shipment.trackingId}
+                                            status={shipment.status}
+                                            origin={originDisplay}
+                                            destination={destDisplay}
+                                            vehicleType={shipment.assignedVehicle?.type}
+                                            cost={shipment.cost}
+                                        />
+                                    );
+                                })}
                             </div>
                         )}
                     </div>
