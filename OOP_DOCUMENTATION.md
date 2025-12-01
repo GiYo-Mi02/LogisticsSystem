@@ -1,34 +1,163 @@
-# 🚀 Object-Oriented Programming (OOP) Documentation
+# 🚀 LogIQ - Complete System Architecture & OOP Documentation
 
-## Logistics Management System - Complete OOP Implementation
+## Logistics Management System - Full Stack Implementation
 
-This document provides a comprehensive overview of all Object-Oriented Programming concepts implemented in this project, including UML class diagrams and code examples.
+This document provides a comprehensive overview of the entire LogIQ system architecture, including Object-Oriented Programming concepts, design patterns, API layer, real-time features, and deployment infrastructure.
+
+**Last Updated:** December 2025
 
 ---
 
 ## 📚 Table of Contents
 
-1. [Overview](#overview)
-2. [The Four Pillars of OOP](#the-four-pillars-of-oop)
-   - [Encapsulation](#1-encapsulation)
-   - [Abstraction](#2-abstraction)
-   - [Inheritance](#3-inheritance)
-   - [Polymorphism](#4-polymorphism)
-3. [Design Patterns Used](#design-patterns-used)
-4. [UML Class Diagrams](#uml-class-diagrams)
-5. [Code Examples](#code-examples)
-6. [File Structure](#file-structure)
+1. [System Overview](#system-overview)
+2. [Technology Stack](#technology-stack)
+3. [Complete Architecture Diagram](#complete-architecture-diagram)
+4. [The Four Pillars of OOP](#the-four-pillars-of-oop)
+5. [Design Patterns Used](#design-patterns-used)
+6. [Core Domain Layer](#core-domain-layer)
+7. [Service Layer](#service-layer)
+8. [API Layer](#api-layer)
+9. [Real-Time Features](#real-time-features)
+10. [Validation Layer](#validation-layer)
+11. [Async Processing (Job Queue)](#async-processing-job-queue)
+12. [Frontend Components](#frontend-components)
+13. [Database Schema](#database-schema)
+14. [File Structure](#file-structure)
 
 ---
 
-## Overview
+## System Overview
 
-This logistics management system demonstrates comprehensive OOP principles through a real-world shipping and delivery platform. The system manages:
+LogIQ is a **full-stack logistics management platform** demonstrating comprehensive OOP principles through a real-world shipping and delivery system. The system features:
 
-- **Users**: Customers, Drivers, and Administrators
-- **Vehicles**: Drones, Trucks, and Ships
-- **Shipments**: Package tracking with pricing strategies
-- **Services**: Business logic layer with dependency injection
+- **🚀 Real-time Tracking**: SSE-based live updates for shipments and vehicles
+- **🗺️ Interactive Fleet Map**: Leaflet-powered global vehicle tracking
+- **📦 Smart Shipment Processing**: Async job queue with Upstash QStash
+- **💰 Dynamic Pricing**: Strategy pattern for Air/Ground/Sea pricing
+- **👥 Role-based Dashboards**: Customer, Driver, and Admin interfaces
+- **🔐 Zod Validation**: Runtime type-safe API validation
+
+---
+
+## Technology Stack
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        FRONTEND                                  │
+├─────────────────────────────────────────────────────────────────┤
+│  Next.js 16 (App Router) │ React 19 │ TypeScript │ Tailwind CSS │
+│  Framer Motion │ Leaflet.js │ react-hook-form │ Zod            │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                        BACKEND                                   │
+├─────────────────────────────────────────────────────────────────┤
+│  Next.js API Routes │ Server-Sent Events │ Prisma ORM          │
+│  Upstash QStash (Job Queue) │ Upstash Redis (State)            │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                        DATABASE                                  │
+├─────────────────────────────────────────────────────────────────┤
+│  PostgreSQL (Supabase) │ Prisma Schema │ Connection Pooling    │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Complete Architecture Diagram
+
+```
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                              LogIQ SYSTEM ARCHITECTURE                        │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              PRESENTATION LAYER                              │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐              │
+│  │ Customer        │  │ Driver          │  │ Admin           │              │
+│  │ Dashboard       │  │ Dashboard       │  │ Dashboard       │              │
+│  │ (/dashboard/    │  │ (/dashboard/    │  │ (/dashboard/    │              │
+│  │  customer)      │  │  driver)        │  │  admin)         │              │
+│  └────────┬────────┘  └────────┬────────┘  └────────┬────────┘              │
+│           │                    │                    │                        │
+│  ┌────────┴────────────────────┴────────────────────┴────────┐              │
+│  │                    REACT COMPONENTS                        │              │
+│  │  ┌──────────────────┐ ┌──────────────┐ ┌───────────────┐  │              │
+│  │  │CreateShipmentForm│ │ ShipmentCard │ │   FleetMap    │  │              │
+│  │  │(react-hook-form) │ │  (display)   │ │  (Leaflet)    │  │              │
+│  │  └──────────────────┘ └──────────────┘ └───────────────┘  │              │
+│  └───────────────────────────────────────────────────────────┘              │
+│           │                                                                  │
+│  ┌────────┴─────────────────────────────────────────────────┐               │
+│  │                    CUSTOM HOOKS                           │               │
+│  │  ┌─────────────────────┐  ┌──────────────────────────┐   │               │
+│  │  │ useRealtime()       │  │ useRealtimeRefresh()     │   │               │
+│  │  │ (SSE connection)    │  │ (auto-refetch on events) │   │               │
+│  │  └─────────────────────┘  └──────────────────────────┘   │               │
+│  └──────────────────────────────────────────────────────────┘               │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                      │
+                                      ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                API LAYER                                     │
+│  ┌────────────────────────────────────────────────────────────────────────┐ │
+│  │                         API ROUTES (/api/*)                             │ │
+│  ├──────────────┬──────────────┬──────────────┬──────────────────────────┤ │
+│  │ /shipments   │ /vehicles    │ /auth/login  │ /admin/stats             │ │
+│  │ /shipments/  │ /users/      │ /driver/     │ /simulation              │ │
+│  │   [id]       │   first-*    │   assignment │                          │ │
+│  ├──────────────┴──────────────┴──────────────┴──────────────────────────┤ │
+│  │                         REAL-TIME & JOBS                               │ │
+│  │ /api/realtime (SSE)  │  /api/jobs/[id]  │  /api/jobs/process-shipment │ │
+│  └────────────────────────────────────────────────────────────────────────┘ │
+│                                      │                                       │
+│  ┌───────────────────────────────────┴───────────────────────────────────┐  │
+│  │                      VALIDATION LAYER (Zod)                            │  │
+│  │  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐      │  │
+│  │  │  common.ts  │ │ shipment.ts │ │ vehicle.ts  │ │   user.ts   │      │  │
+│  │  │  (UUID,     │ │ (create,    │ │ (create     │ │ (login,     │      │  │
+│  │  │   location) │ │  query)     │ │  schema)    │ │  assignment)│      │  │
+│  │  └─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘      │  │
+│  └───────────────────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                      │
+                                      ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              SERVICE LAYER                                   │
+│  ┌─────────────────────┐ ┌─────────────────────┐ ┌─────────────────────┐    │
+│  │   ShipmentService   │ │   VehicleService    │ │    UserService      │    │
+│  │ • createShipment()  │ │ • getAvailable()    │ │ • createUser()      │    │
+│  │ • getByCustomer()   │ │ • assignToShipment()│ │ • findByEmail()     │    │
+│  │ • calculateCost()   │ │ • getByDriver()     │ │                     │    │
+│  └──────────┬──────────┘ └──────────┬──────────┘ └──────────┬──────────┘    │
+│             │                       │                       │               │
+│             └───────────────────────┼───────────────────────┘               │
+│                                     ▼                                        │
+│  ┌───────────────────────────────────────────────────────────────────────┐  │
+│  │                        CORE DOMAIN LAYER                               │  │
+│  │                        (OOP Implementation)                            │  │
+│  └───────────────────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                      │
+                                      ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           INFRASTRUCTURE LAYER                               │
+│  ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐                │
+│  │   prisma.ts     │ │   realtime.ts   │ │    queue.ts     │                │
+│  │ (DB Client)     │ │ (SSE Emitter)   │ │ (Upstash QStash)│                │
+│  └────────┬────────┘ └────────┬────────┘ └────────┬────────┘                │
+│           │                   │                   │                          │
+│           ▼                   ▼                   ▼                          │
+│  ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐                │
+│  │   PostgreSQL    │ │  In-Memory      │ │  Upstash Redis  │                │
+│  │   (Supabase)    │ │  Event Store    │ │  + QStash       │                │
+│  └─────────────────┘ └─────────────────┘ └─────────────────┘                │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
@@ -40,27 +169,42 @@ This logistics management system demonstrates comprehensive OOP principles throu
 
 #### Implementation in this Project:
 
-**Private Fields with Getters/Setters** (See: `User.ts`, `Vehicle.ts`, `Shipment.ts`)
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    ENCAPSULATION EXAMPLE                        │
+│                         User Class                               │
+├─────────────────────────────────────────────────────────────────┤
+│  PRIVATE (Hidden)           │  PUBLIC (Exposed)                 │
+│  ─────────────────          │  ─────────────────                │
+│  - _name: string            │  + get name(): string             │
+│  - _email: string           │  + set name(v): void              │
+│  - _password: string        │  + get email(): string            │
+│  - _notifications: Prefs    │  + verifyPassword(): bool         │
+│                             │  + notify(): void                  │
+│  ─────────────────          │  ─────────────────                │
+│  Password has NO getter     │  Setters include validation       │
+│  (write-only for security)  │  touch() updates timestamp        │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Code Example** (See: `User.ts`)
 
 ```typescript
-// From src/core/User.ts
 export abstract class User extends BaseEntity implements INotifiable {
-  // PRIVATE FIELDS - Cannot be accessed directly from outside
+  // PRIVATE FIELDS - Cannot be accessed directly
   private _name: string;
   private _email: string;
-  private _password: string; // Sensitive data protected
-  private _notificationPreferences: NotificationPreferences;
+  private _password: string; // Sensitive - protected!
 
   // CONTROLLED ACCESS via Getters
   public get name(): string {
     return this._name;
   }
-
   public get email(): string {
     return this._email;
   }
 
-  // CONTROLLED MODIFICATION via Setters with Validation
+  // VALIDATION in Setters
   public set name(value: string) {
     if (value.trim().length < 2) {
       throw new Error("Name must be at least 2 characters");
@@ -75,30 +219,43 @@ export abstract class User extends BaseEntity implements INotifiable {
       throw new Error("Password must be at least 8 characters");
     }
     this._password = this.hashPassword(newPassword);
-    this.touch();
   }
 }
 ```
-
-**Benefits of Encapsulation:**
-
-- ✅ Data protection (password cannot be read)
-- ✅ Validation on modification
-- ✅ Internal state consistency
-- ✅ Implementation can change without affecting external code
 
 ---
 
 ### 2. ABSTRACTION
 
-**Definition**: Abstraction is hiding complex implementation details and showing only the necessary features of an object. It focuses on "what" an object does, not "how" it does it.
+**Definition**: Abstraction hides complex implementation details and shows only necessary features. It focuses on "what" an object does, not "how" it does it.
 
-#### Implementation in this Project:
+#### Interfaces (Contracts)
 
-**Interfaces** (See: `src/core/interfaces/`)
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                      ABSTRACTION LAYER                          │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐ │
+│  │   ITrackable    │  │   INotifiable   │  │    IPayable     │ │
+│  ├─────────────────┤  ├─────────────────┤  ├─────────────────┤ │
+│  │+getTrackingId() │  │+notify()        │  │+processPayment()│ │
+│  │+getStatus()     │  │+getPreferences()│  │+refund()        │ │
+│  │+getLocation()   │  │+setPreferences()│  │+getHistory()    │ │
+│  │+getHistory()    │  │                 │  │                 │ │
+│  └────────┬────────┘  └────────┬────────┘  └────────┬────────┘ │
+│           │                    │                    │           │
+│           ▼                    ▼                    ▼           │
+│  ┌─────────────────────────────────────────────────────────────┐│
+│  │   Implemented by: Vehicle, Shipment, User                   ││
+│  └─────────────────────────────────────────────────────────────┘│
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Code Example:**
 
 ```typescript
-// From src/core/interfaces/ITrackable.ts
+// Interface defines WHAT, not HOW
 export interface ITrackable {
   getTrackingId(): string;
   getStatus(): string;
@@ -106,265 +263,198 @@ export interface ITrackable {
   getTrackingHistory(): TrackingEvent[];
 }
 
-// From src/core/interfaces/INotifiable.ts
-export interface INotifiable {
-  notify(message: string, type: NotificationType): void;
-  getNotificationPreferences(): NotificationPreferences;
-  setNotificationPreferences(prefs: Partial<NotificationPreferences>): void;
-}
-
-// From src/core/interfaces/IPayable.ts
-export interface IPayable {
-  processPayment(amount: number, method: string): PaymentRecord;
-  refund(paymentId: string, amount?: number): PaymentRecord;
-  getPaymentHistory(): PaymentRecord[];
-}
-```
-
-**Abstract Classes** (See: `BaseEntity.ts`, `Vehicle.ts`, `User.ts`)
-
-```typescript
-// From src/core/base/BaseEntity.ts
+// Abstract class provides partial implementation
 export abstract class BaseEntity {
-  private _id: string;
-  private _createdAt: Date;
-  private _updatedAt: Date;
+  abstract validate(): boolean; // Subclasses MUST implement
+  abstract toJSON(): object; // Subclasses MUST implement
 
-  // Abstract methods - MUST be implemented by subclasses
-  abstract validate(): boolean;
-  abstract toJSON(): object;
-
-  // Concrete methods - shared by all entities
   protected touch(): void {
+    // Shared implementation
     this._updatedAt = new Date();
   }
 }
 ```
-
-**Benefits of Abstraction:**
-
-- ✅ Defines clear contracts (interfaces)
-- ✅ Reduces complexity for users of the class
-- ✅ Forces subclasses to implement required functionality
-- ✅ Enables polymorphism
 
 ---
 
 ### 3. INHERITANCE
 
-**Definition**: Inheritance allows a class (child/subclass) to inherit properties and methods from another class (parent/superclass), promoting code reuse and establishing an "is-a" relationship.
+**Definition**: Inheritance allows a class to inherit properties and methods from another class, promoting code reuse and establishing "is-a" relationships.
 
-#### Implementation in this Project:
-
-**Class Hierarchy Diagram:**
+#### Complete Class Hierarchy
 
 ```
-BaseEntity (Abstract)
-    ├── User (Abstract)
-    │   ├── Customer
-    │   ├── Driver
-    │   └── Admin
-    ├── Vehicle (Abstract)
-    │   ├── Drone
-    │   ├── Truck
-    │   └── Ship
-    └── Shipment
-
-BasePricingStrategy (Abstract)
-    ├── AirPricingStrategy
-    ├── GroundPricingStrategy
-    └── SeaPricingStrategy
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         INHERITANCE HIERARCHY                                │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│                            ┌──────────────┐                                  │
+│                            │  BaseEntity  │ (Abstract)                       │
+│                            │──────────────│                                  │
+│                            │ - _id        │                                  │
+│                            │ - _createdAt │                                  │
+│                            │ - _updatedAt │                                  │
+│                            │ + touch()    │                                  │
+│                            └──────┬───────┘                                  │
+│                    ┌──────────────┼──────────────┐                           │
+│                    ▼              ▼              ▼                           │
+│            ┌────────────┐  ┌────────────┐  ┌────────────┐                   │
+│            │    User    │  │  Vehicle   │  │  Shipment  │                   │
+│            │ (Abstract) │  │ (Abstract) │  │            │                   │
+│            └──────┬─────┘  └──────┬─────┘  └────────────┘                   │
+│         ┌─────────┼─────────┐     │                                          │
+│         ▼         ▼         ▼     │                                          │
+│   ┌──────────┐┌───────┐┌───────┐  │                                          │
+│   │ Customer ││ Driver││ Admin │  │                                          │
+│   └──────────┘└───────┘└───────┘  │                                          │
+│                            ┌──────┴──────┬──────────┐                        │
+│                            ▼             ▼          ▼                        │
+│                       ┌────────┐    ┌────────┐  ┌────────┐                   │
+│                       │  Drone │    │  Truck │  │  Ship  │                   │
+│                       └────────┘    └────────┘  └────────┘                   │
+│                                                                              │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                        PRICING STRATEGY HIERARCHY                            │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│                      ┌─────────────────────────┐                            │
+│                      │  BasePricingStrategy    │ (Abstract)                  │
+│                      │─────────────────────────│                            │
+│                      │ + calculate() [template]│                            │
+│                      │ # applyDiscount() [hook]│                            │
+│                      └───────────┬─────────────┘                            │
+│               ┌──────────────────┼──────────────────┐                       │
+│               ▼                  ▼                  ▼                       │
+│      ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐           │
+│      │ AirPricing      │ │ GroundPricing   │ │  SeaPricing     │           │
+│      │ Strategy        │ │ Strategy        │ │  Strategy       │           │
+│      │─────────────────│ │─────────────────│ │─────────────────│           │
+│      │ $2.5/kg         │ │ $0.5/kg         │ │ $0.1/kg         │           │
+│      │ $1.5/km         │ │ $0.8/km         │ │ $0.2/km         │           │
+│      │ 15% fuel charge │ │ zone multipliers│ │ port fees       │           │
+│      └─────────────────┘ └─────────────────┘ └─────────────────┘           │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
-
-**Code Example:**
-
-```typescript
-// PARENT CLASS: BaseEntity
-export abstract class BaseEntity {
-  private _id: string;
-  private _createdAt: Date;
-  private _updatedAt: Date;
-
-  constructor(id: string) {
-    this._id = id;
-    this._createdAt = new Date();
-    this._updatedAt = new Date();
-  }
-
-  public get id(): string {
-    return this._id;
-  }
-  public get createdAt(): Date {
-    return new Date(this._createdAt);
-  }
-  public get updatedAt(): Date {
-    return new Date(this._updatedAt);
-  }
-
-  protected touch(): void {
-    this._updatedAt = new Date();
-  }
-
-  abstract validate(): boolean;
-  abstract toJSON(): object;
-}
-
-// CHILD CLASS: User extends BaseEntity
-export abstract class User extends BaseEntity implements INotifiable {
-  private _name: string;
-  private _email: string;
-
-  constructor(id: string, name: string, email: string, password: string) {
-    super(id); // Call parent constructor
-    this._name = name;
-    this._email = email;
-  }
-
-  // Inherits: id, createdAt, updatedAt, touch()
-  // Implements: validate(), toJSON()
-}
-
-// GRANDCHILD CLASS: Customer extends User
-export class Customer extends User {
-  private _loyaltyPoints: number = 0;
-  private _membershipTier: "bronze" | "silver" | "gold" | "platinum" = "bronze";
-
-  constructor(id: string, name: string, email: string, password: string) {
-    super(id, name, email, password); // Call User constructor
-  }
-
-  // Inherits from User: name, email, notification methods
-  // Inherits from BaseEntity: id, createdAt, updatedAt, touch()
-}
-```
-
-**Benefits of Inheritance:**
-
-- ✅ Code reuse (DRY principle)
-- ✅ Establishes clear hierarchies
-- ✅ Shared functionality in parent classes
-- ✅ Specialized behavior in child classes
 
 ---
 
 ### 4. POLYMORPHISM
 
-**Definition**: Polymorphism allows objects of different classes to be treated as objects of a common parent class. The same method name can have different implementations in different classes.
+**Definition**: Polymorphism allows objects of different classes to be treated as objects of a common parent class. Same method name, different implementations.
 
-#### Implementation in this Project:
+#### Polymorphism in Action
 
-**Method Overriding** (See: `Vehicle.ts` subclasses)
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         POLYMORPHISM EXAMPLE                                 │
+│                         Vehicle.move() Method                                │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  function calculateRoute(vehicle: Vehicle, from: Location, to: Location) {  │
+│      return vehicle.move(from, to);  // Polymorphic call                    │
+│  }                                                                           │
+│                                                                              │
+│  ┌───────────────────────────────────────────────────────────────────────┐  │
+│  │  Same method call → Different implementations based on actual type    │  │
+│  └───────────────────────────────────────────────────────────────────────┘  │
+│                                                                              │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐              │
+│  │     DRONE       │  │     TRUCK       │  │      SHIP       │              │
+│  │    move()       │  │    move()       │  │    move()       │              │
+│  ├─────────────────┤  ├─────────────────┤  ├─────────────────┤              │
+│  │ • Geodesic path │  │ • Road network  │  │ • Maritime route│              │
+│  │ • Straight line │  │ • Manhattan dist│  │ • 1.3x longer   │              │
+│  │ • 60 km/h       │  │ • 90 km/h       │  │ • 35 km/h       │              │
+│  │ • Max 50kg      │  │ • Max 5000kg    │  │ • Max 50000kg   │              │
+│  └─────────────────┘  └─────────────────┘  └─────────────────┘              │
+│         │                    │                    │                          │
+│         ▼                    ▼                    ▼                          │
+│   NYC → LA: 3940km     NYC → LA: 4500km    NYC → LA: 5122km                 │
+│   65.7 hours           50.0 hours          146.3 hours                       │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+**Code Example:**
 
 ```typescript
-// ABSTRACT CLASS defines the contract
-export abstract class Vehicle extends BaseEntity implements ITrackable {
+// Abstract method in parent
+abstract class Vehicle {
   abstract move(from: Location, to: Location): Route;
-  abstract calculateFuelConsumption(distance: number): number;
   abstract getMaxSpeed(): number;
 }
 
-// DRONE: Geodesic (straight-line) path
-export class Drone extends Vehicle {
+// Different implementations in each subclass
+class Drone extends Vehicle {
   move(from: Location, to: Location): Route {
-    console.log("Drone calculating geodesic flight path...");
-    // Straight line distance (drones fly direct)
-    const distance =
-      Math.sqrt(
-        Math.pow(to.lat - from.lat, 2) + Math.pow(to.lng - from.lng, 2)
-      ) * 111;
-    return {
-      path: [from, to], // Direct path
-      distance: distance,
-      estimatedTime: (distance / 60) * 60,
-    };
+    // Geodesic (straight line) calculation
+    const distance = haversine(from, to);
+    return { path: [from, to], distance, estimatedTime: distance / 60 };
   }
-
   getMaxSpeed(): number {
-    return 60; // 60 km/h
+    return 60;
   }
 }
 
-// TRUCK: Road network (Manhattan distance)
-export class Truck extends Vehicle {
+class Truck extends Vehicle {
   move(from: Location, to: Location): Route {
-    console.log("Truck calculating road network path...");
-    // Manhattan distance (trucks follow roads)
-    const latDiff = Math.abs(to.lat - from.lat);
-    const lngDiff = Math.abs(to.lng - from.lng);
-    const distance = (latDiff + lngDiff) * 111;
+    // Manhattan distance (roads)
+    const distance = Math.abs(to.lat - from.lat) + Math.abs(to.lng - from.lng);
     return {
-      path: [from, { lat: to.lat, lng: from.lng }, to], // L-shape
-      distance: distance,
-      estimatedTime: (distance / 90) * 60,
+      path: [from, midpoint, to],
+      distance: distance * 111,
+      estimatedTime: distance / 90,
     };
   }
-
   getMaxSpeed(): number {
-    return 90; // 90 km/h
-  }
-}
-
-// SHIP: Maritime routes (longer paths)
-export class Ship extends Vehicle {
-  move(from: Location, to: Location): Route {
-    console.log("Ship calculating maritime route...");
-    // Ships take longer routes due to sea lanes
-    const distance =
-      Math.sqrt(
-        Math.pow(to.lat - from.lat, 2) + Math.pow(to.lng - from.lng, 2)
-      ) *
-      111 *
-      1.3; // 30% longer
-    return {
-      path: [from, to],
-      distance: distance,
-      estimatedTime: (distance / 35) * 60,
-    };
-  }
-
-  getMaxSpeed(): number {
-    return 35; // 35 km/h
+    return 90;
   }
 }
 ```
-
-**Polymorphism in Action:**
-
-```typescript
-// Same interface, different behaviors
-function calculateDeliveryRoute(
-  vehicle: Vehicle,
-  from: Location,
-  to: Location
-): Route {
-  // Polymorphism: the correct move() is called based on actual type
-  return vehicle.move(from, to);
-}
-
-const drone = new Drone("d1", "DRN-001", 120);
-const truck = new Truck("t1", "TRK-001", 4);
-const ship = new Ship("s1", "SHP-001", 1000);
-
-const from = { lat: 0, lng: 0 };
-const to = { lat: 10, lng: 10 };
-
-calculateDeliveryRoute(drone, from, to); // Calls Drone.move() - straight path
-calculateDeliveryRoute(truck, from, to); // Calls Truck.move() - L-shape path
-calculateDeliveryRoute(ship, from, to); // Calls Ship.move() - sea lane path
-```
-
-**Benefits of Polymorphism:**
-
-- ✅ Write flexible, reusable code
-- ✅ Process different types uniformly
-- ✅ Easy to add new types without changing existing code
-- ✅ Enables powerful design patterns (Strategy, Factory, etc.)
 
 ---
 
 ## Design Patterns Used
 
 ### 1. Strategy Pattern (Pricing)
+
+The Strategy pattern allows the pricing algorithm to be selected at runtime. Each shipping type (Air, Ground, Sea) has its own pricing strategy.
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         STRATEGY PATTERN                                     │
+│                         Pricing Strategies                                   │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│                    ┌───────────────────────────┐                            │
+│                    │   <<interface>>           │                            │
+│                    │   PricingStrategy         │                            │
+│                    │───────────────────────────│                            │
+│                    │ + calculate(w, d): number │                            │
+│                    │ + getStrategyName(): str  │                            │
+│                    │ + getRates(): RateInfo    │                            │
+│                    │ + isEligible(w, d): bool  │                            │
+│                    └─────────────┬─────────────┘                            │
+│                                  │                                          │
+│            ┌─────────────────────┼─────────────────────┐                    │
+│            │                     │                     │                    │
+│            ▼                     ▼                     ▼                    │
+│  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐          │
+│  │ AirPricing       │  │ GroundPricing    │  │ SeaPricing       │          │
+│  │ Strategy         │  │ Strategy         │  │ Strategy         │          │
+│  │──────────────────│  │──────────────────│  │──────────────────│          │
+│  │ weightRate: 2.5  │  │ weightRate: 0.5  │  │ weightRate: 0.1  │          │
+│  │ distRate: 1.5    │  │ distRate: 0.8    │  │ distRate: 0.2    │          │
+│  │ fuelSurcharge:15%│  │ zoneMultipliers  │  │ containerFees    │          │
+│  │ urgencyRate: 50% │  │ tollFees         │  │ portFees         │          │
+│  └──────────────────┘  └──────────────────┘  └──────────────────┘          │
+│                                                                              │
+│  ┌───────────────────────────────────────────────────────────────────────┐  │
+│  │  Usage: shipment.calculateCost(new AirPricingStrategy())              │  │
+│  │         shipment.calculateCost(new GroundPricingStrategy())           │  │
+│  │         shipment.calculateCost(new SeaPricingStrategy())              │  │
+│  └───────────────────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
 
 ```mermaid
 classDiagram
@@ -399,7 +489,52 @@ classDiagram
     PricingStrategy <|.. SeaPricingStrategy
 ```
 
+---
+
 ### 2. Factory Pattern (Shipment & Vehicle Creation)
+
+The Factory pattern encapsulates object creation logic, allowing complex objects to be created without exposing the creation logic.
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          FACTORY PATTERN                                     │
+│                     Shipment & Vehicle Factories                             │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  ┌────────────────────────────────────────────────────────────────────────┐ │
+│  │                        ShipmentFactory                                  │ │
+│  │────────────────────────────────────────────────────────────────────────│ │
+│  │  STATIC METHODS:                                                        │ │
+│  │  + createShipment(options): ShipmentResult                             │ │
+│  │  + generateTrackingId(): string                                         │ │
+│  │  + recommendVehicle(weight, type, urgency): VehicleType                │ │
+│  │  + estimateDelivery(type, distance): number                            │ │
+│  │  + validateShipmentOptions(options): boolean                           │ │
+│  │                                                                         │ │
+│  │  RETURNS: { shipment, estimatedCost, recommendedVehicle, deliveryDays }│ │
+│  └────────────────────────────────────────────────────────────────────────┘ │
+│                                                                              │
+│  ┌────────────────────────────────────────────────────────────────────────┐ │
+│  │                    Abstract Vehicle Factory                             │ │
+│  │────────────────────────────────────────────────────────────────────────│ │
+│  │                                                                         │ │
+│  │              ┌────────────────────────┐                                │ │
+│  │              │ <<interface>>          │                                │ │
+│  │              │ IVehicleFactory        │                                │ │
+│  │              │────────────────────────│                                │ │
+│  │              │ + create(opts): Vehicle│                                │ │
+│  │              │ + getType(): VehicleType│                               │ │
+│  │              └───────────┬────────────┘                                │ │
+│  │                          │                                              │ │
+│  │        ┌─────────────────┼─────────────────┐                           │ │
+│  │        ▼                 ▼                 ▼                           │ │
+│  │  ┌───────────┐    ┌───────────┐    ┌───────────┐                      │ │
+│  │  │  Drone    │    │  Truck    │    │  Ship     │                      │ │
+│  │  │  Factory  │    │  Factory  │    │  Factory  │                      │ │
+│  │  └───────────┘    └───────────┘    └───────────┘                      │ │
+│  └────────────────────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
 
 ```mermaid
 classDiagram
@@ -434,7 +569,53 @@ classDiagram
     ShipmentFactory --> IVehicleFactory
 ```
 
+---
+
 ### 3. Builder Pattern (Shipment Builder)
+
+The Builder pattern constructs complex objects step by step with a fluent interface.
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          BUILDER PATTERN                                     │
+│                        ShipmentBuilder                                       │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  ┌────────────────────────────────────────────────────────────────────────┐ │
+│  │                        ShipmentBuilder                                  │ │
+│  │────────────────────────────────────────────────────────────────────────│ │
+│  │  - trackingId: string                                                   │ │
+│  │  - weight: number                                                       │ │
+│  │  - origin: Location                                                     │ │
+│  │  - destination: Location                                                │ │
+│  │  - type: ShipmentType                                                   │ │
+│  │  - customerId: string                                                   │ │
+│  │────────────────────────────────────────────────────────────────────────│ │
+│  │  + static create(): ShipmentBuilder                                     │ │
+│  │  + setTrackingId(id): this                                             │ │
+│  │  + setWeight(weight): this                                             │ │
+│  │  + setOrigin(location): this                                           │ │
+│  │  + setDestination(location): this                                      │ │
+│  │  + setType(type): this                                                 │ │
+│  │  + setCustomerId(id): this                                             │ │
+│  │  + addInsurance(value): this                                           │ │
+│  │  + build(): ShipmentResult                                             │ │
+│  └────────────────────────────────────────────────────────────────────────┘ │
+│                                                                              │
+│  USAGE (Fluent Interface):                                                   │
+│  ┌────────────────────────────────────────────────────────────────────────┐ │
+│  │  const result = ShipmentBuilder.create()                                │ │
+│  │    .setTrackingId("TRK-001")                                           │ │
+│  │    .setWeight(25)                                                       │ │
+│  │    .setOrigin({ lat: 40.71, lng: -74.01 })                             │ │
+│  │    .setDestination({ lat: 34.05, lng: -118.24 })                       │ │
+│  │    .setType(ShipmentType.AIR)                                          │ │
+│  │    .setCustomerId("customer-123")                                       │ │
+│  │    .addInsurance(5000)                                                  │ │
+│  │    .build();                                                            │ │
+│  └────────────────────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
 
 ```typescript
 // Fluent interface for complex object construction
@@ -447,6 +628,100 @@ const result = ShipmentBuilder.create()
   .setUrgency("high")
   .setInsurance(5000)
   .build();
+```
+
+---
+
+### 4. Observer Pattern (Real-Time Events)
+
+The Observer pattern is implemented via Server-Sent Events for real-time updates.
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         OBSERVER PATTERN                                     │
+│                     Real-Time Event System                                   │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│                    ┌────────────────────────┐                               │
+│                    │   RealtimeEmitter      │ (Subject/Observable)          │
+│                    │   (Singleton)          │                               │
+│                    │────────────────────────│                               │
+│                    │ - clients: Set<Client> │                               │
+│                    │ + subscribe(client)    │                               │
+│                    │ + unsubscribe(client)  │                               │
+│                    │ + emit(event)          │                               │
+│                    └───────────┬────────────┘                               │
+│                                │                                             │
+│                    ┌───────────┴───────────┐                                │
+│                    │     BROADCASTS TO     │                                │
+│                    └───────────┬───────────┘                                │
+│                                │                                             │
+│          ┌─────────────────────┼─────────────────────┐                      │
+│          ▼                     ▼                     ▼                      │
+│  ┌──────────────┐     ┌──────────────┐     ┌──────────────┐                │
+│  │  Customer    │     │   Driver     │     │   Admin      │                │
+│  │  Dashboard   │     │  Dashboard   │     │  Dashboard   │                │
+│  │──────────────│     │──────────────│     │──────────────│                │
+│  │ useRealtime()│     │ useRealtime()│     │ useRealtime()│                │
+│  │ onShipment   │     │ onAssignment │     │ onVehicle    │                │
+│  │ onStatus     │     │ onVehicle    │     │ onShipment   │                │
+│  └──────────────┘     └──────────────┘     └──────────────┘                │
+│                                                                              │
+│  EVENT TYPES:                                                               │
+│  • shipment_update  • vehicle_update   • new_shipment                       │
+│  • assignment_update • stats_update    • simulation_step                    │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### 5. Singleton Pattern (Database & Event Emitter)
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         SINGLETON PATTERN                                    │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  ┌─────────────────────────┐        ┌─────────────────────────┐            │
+│  │   Prisma Client         │        │   RealtimeEmitter       │            │
+│  │   (prisma.ts)           │        │   (realtime.ts)         │            │
+│  │─────────────────────────│        │─────────────────────────│            │
+│  │ globalForPrisma.prisma  │        │ realtimeEmitter         │            │
+│  │ (single instance)       │        │ (single instance)       │            │
+│  └─────────────────────────┘        └─────────────────────────┘            │
+│                                                                              │
+│  Ensures only ONE database connection and ONE event emitter exist           │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### 6. Template Method Pattern (Pricing)
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                      TEMPLATE METHOD PATTERN                                 │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  ┌────────────────────────────────────────────────────────────────────────┐ │
+│  │  BasePricingStrategy (Abstract)                                         │ │
+│  │────────────────────────────────────────────────────────────────────────│ │
+│  │  TEMPLATE METHOD (defines algorithm structure):                         │ │
+│  │                                                                         │ │
+│  │  calculate(weight, distance) {                                          │ │
+│  │    const base = this.calculateBaseCost(weight, distance);  // Step 1   │ │
+│  │    const withSurcharges = this.applySurcharges(base);      // Step 2   │ │
+│  │    return this.applyDiscount(withSurcharges);              // Hook     │ │
+│  │  }                                                                      │ │
+│  │                                                                         │ │
+│  │  # calculateBaseCost()  → ABSTRACT (subclasses must implement)         │ │
+│  │  # applySurcharges()    → ABSTRACT (subclasses must implement)         │ │
+│  │  # applyDiscount()      → HOOK (optional override, default: no change) │ │
+│  └────────────────────────────────────────────────────────────────────────┘ │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
