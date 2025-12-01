@@ -2,6 +2,30 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { emitVehicleUpdate, emitShipmentUpdate } from '@/lib/realtime';
 
+// Helper to retry database operations
+async function withRetry<T>(
+    operation: () => Promise<T>,
+    maxRetries = 3,
+    delay = 1000
+): Promise<T> {
+    let lastError: Error | null = null;
+    for (let i = 0; i < maxRetries; i++) {
+        try {
+            return await operation();
+        } catch (error: any) {
+            lastError = error;
+            // Only retry on connection errors
+            if (error?.code === 'P1017' || error?.code === 'P2024') {
+                console.log(`Database connection error, retrying (${i + 1}/${maxRetries})...`);
+                await new Promise(resolve => setTimeout(resolve, delay * (i + 1)));
+                continue;
+            }
+            throw error;
+        }
+    }
+    throw lastError;
+}
+
 /**
  * POST /api/simulation
  * Simulate vehicle movement for active shipments
@@ -10,15 +34,17 @@ import { emitVehicleUpdate, emitShipmentUpdate } from '@/lib/realtime';
 export async function POST() {
     try {
         // Get all vehicles with active shipments (IN_TRANSIT status)
-        const activeVehicles = await prisma.vehicle.findMany({
-            where: {
-                status: 'IN_TRANSIT',
-                currentShipmentId: { not: null }
-            },
-            include: {
-                currentShipment: true
-            }
-        });
+        const activeVehicles = await withRetry(() => 
+            prisma.vehicle.findMany({
+                where: {
+                    status: 'IN_TRANSIT',
+                    currentShipmentId: { not: null }
+                },
+                include: {
+                    currentShipment: true
+                }
+            })
+        );
 
         const updates = [];
 
