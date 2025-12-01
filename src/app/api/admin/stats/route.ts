@@ -17,18 +17,34 @@ export async function GET() {
             _sum: { cost: true }
         });
 
-        // Get all vehicles with their positions
+        // Get all vehicles with their positions and current shipment details
         const vehicles = await prisma.vehicle.findMany({
             include: {
-                currentShipment: true
+                currentShipment: {
+                    select: {
+                        id: true,
+                        trackingId: true,
+                        originLat: true,
+                        originLng: true,
+                        destLat: true,
+                        destLng: true,
+                        originCity: true,
+                        destCity: true,
+                        status: true
+                    }
+                }
             }
         });
 
-        // Get recent shipments
+        // Get recent shipments with location info
         const recentShipments = await prisma.shipment.findMany({
             take: 10,
             orderBy: { createdAt: 'desc' },
-            include: { customer: true }
+            include: { 
+                customer: {
+                    select: { name: true }
+                }
+            }
         });
 
         return NextResponse.json({
