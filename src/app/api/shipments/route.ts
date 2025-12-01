@@ -27,10 +27,12 @@ export async function POST(request: Request) {
         const validation = await validateRequestBody(request, createShipmentSchema);
         
         if ('error' in validation) {
+            console.error('Shipment validation failed:', validation);
             return validation.error;
         }
         
         const { customerId, weight, origin, destination, urgency } = validation.data;
+        console.log('Validated shipment data:', { customerId, weight, origin, destination, urgency });
         
         // Check if async queue is available
         if (isQueueAvailable()) {

@@ -69,9 +69,12 @@ export async function validateRequestBody<T>(
 ): Promise<{ data: T } | { error: NextResponse }> {
     try {
         const body = await request.json();
+        console.log('Validating request body:', JSON.stringify(body, null, 2));
+        
         const result = validateData(schema, body);
 
         if (!result.success) {
+            console.error('Validation failed:', JSON.stringify(result.error, null, 2));
             return {
                 error: NextResponse.json(
                     {
@@ -85,6 +88,7 @@ export async function validateRequestBody<T>(
 
         return { data: result.data };
     } catch (error) {
+        console.error('JSON parsing error:', error);
         return {
             error: NextResponse.json(
                 { error: 'Invalid JSON body' },
