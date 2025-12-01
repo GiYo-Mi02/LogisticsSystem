@@ -11,15 +11,31 @@ const locationOptions = Object.entries(PRESET_LOCATIONS).map(([key, loc]) => ({
 }));
 
 export default function CreateShipmentForm({ customerId, onSuccess }: { customerId: string, onSuccess?: () => void }) {
-    const { register, handleSubmit, formState: { errors }, watch } = useForm();
+    const { 
+        register, 
+        handleSubmit, 
+        formState: { errors }, 
+        watch 
+    } = useForm({
+        defaultValues: {
+            weight: '' as unknown as number,
+            origin: '',
+            destination: '',
+            urgency: 'standard' as const,
+        },
+    });
     const [isLoading, setIsLoading] = useState(false);
     const [result, setResult] = useState<any>(null);
+    const [jobId, setJobId] = useState<string | null>(null);
 
     const selectedOrigin = watch('origin');
     const selectedDest = watch('destination');
 
-    const onSubmit = async (data: any) => {
+    const onSubmit = async (data: { weight: number; origin: string; destination: string; urgency: string }) => {
         setIsLoading(true);
+        setResult(null);
+        setJobId(null);
+        
         try {
             const originLoc = PRESET_LOCATIONS[data.origin];
             const destLoc = PRESET_LOCATIONS[data.destination];
@@ -33,17 +49,34 @@ export default function CreateShipmentForm({ customerId, onSuccess }: { customer
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     customerId: customerId,
-                    weight: parseFloat(data.weight),
+                    weight: parseFloat(String(data.weight)), // Ensure it's a number
                     origin: originLoc,
                     destination: destLoc,
                     urgency: data.urgency,
                 }),
             });
+            
             const json = await response.json();
-            setResult(json.shipment);
+            
+            if (!response.ok) {
+                throw new Error(json.error || 'Failed to create shipment');
+            }
+            
+            // Handle async response (202 Accepted)
+            if (response.status === 202) {
+                setJobId(json.jobId);
+                setResult({
+                    ...json.shipment,
+                    isProcessing: true,
+                });
+            } else {
+                setResult(json.shipment);
+            }
+            
             if (onSuccess) onSuccess();
         } catch (error) {
             console.error(error);
+            setResult({ error: error instanceof Error ? error.message : 'Failed to create shipment' });
         } finally {
             setIsLoading(false);
         }
@@ -169,14 +202,41 @@ export default function CreateShipmentForm({ customerId, onSuccess }: { customer
                 <motion.div
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
-                    className="mt-6 p-4 bg-green-500/10 border border-green-500/30 rounded-lg"
+                    className={`mt-6 p-4 rounded-lg ${
+                        result.error 
+                            ? 'bg-red-500/10 border border-red-500/30' 
+                            : result.isProcessing
+                            ? 'bg-yellow-500/10 border border-yellow-500/30'
+                            : 'bg-green-500/10 border border-green-500/30'
+                    }`}
                 >
-                    <p className="text-green-400 font-bold text-sm mb-2">✓ SHIPMENT CONFIRMED</p>
-                    <div className="text-xs text-gray-300 space-y-1">
-                        <p><span className="text-gray-500">Tracking:</span> <span className="font-mono">{result.trackingId}</span></p>
-                        <p><span className="text-gray-500">Cost:</span> <span className="text-green-400 font-bold">${result.cost?.toFixed(2) || '0.00'}</span></p>
-                        <p><span className="text-gray-500">Status:</span> {result.status}</p>
-                    </div>
+                    {result.error ? (
+                        <p className="text-red-400 font-bold text-sm">✗ {result.error}</p>
+                    ) : result.isProcessing ? (
+                        <>
+                            <p className="text-yellow-400 font-bold text-sm mb-2 flex items-center gap-2">
+                                <span className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></span>
+                                PROCESSING SHIPMENT...
+                            </p>
+                            <div className="text-xs text-gray-300 space-y-1">
+                                <p><span className="text-gray-500">Tracking:</span> <span className="font-mono">{result.trackingId}</span></p>
+                                <p><span className="text-gray-500">Status:</span> {result.status}</p>
+                                {jobId && <p><span className="text-gray-500">Job ID:</span> <span className="font-mono text-xs">{jobId}</span></p>}
+                                <p className="text-yellow-400/70 text-xs mt-2">
+                                    Vehicle assignment and pricing are being calculated...
+                                </p>
+                            </div>
+                        </>
+                    ) : (
+                        <>
+                            <p className="text-green-400 font-bold text-sm mb-2">✓ SHIPMENT CONFIRMED</p>
+                            <div className="text-xs text-gray-300 space-y-1">
+                                <p><span className="text-gray-500">Tracking:</span> <span className="font-mono">{result.trackingId}</span></p>
+                                <p><span className="text-gray-500">Cost:</span> <span className="text-green-400 font-bold">${result.cost?.toFixed(2) || '0.00'}</span></p>
+                                <p><span className="text-gray-500">Status:</span> {result.status}</p>
+                            </div>
+                        </>
+                    )}
                 </motion.div>
             )}
         </div>

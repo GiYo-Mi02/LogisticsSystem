@@ -1,6 +1,6 @@
 import { Drone, Truck, Ship } from '../src/core/Vehicle';
 import { AirPricingStrategy, GroundPricingStrategy, SeaPricingStrategy } from '../src/core/PricingStrategy';
-import { ShipmentFactory } from '../src/core/ShipmentFactory';
+import { ShipmentFactory, ShipmentOptions } from '../src/core/ShipmentFactory';
 import { Customer } from '../src/core/User';
 
 async function runTests() {
@@ -45,16 +45,40 @@ async function runTests() {
     const customer = new Customer('c1', 'John Doe', 'john@example.com');
 
     console.log('Scenario A: Urgent, Light Package (<50kg)');
-    const resultA = ShipmentFactory.createShipment('TRK-A', 10, origin, dest, customer, 'high');
+    const optionsA: ShipmentOptions = {
+        trackingId: 'TRK-A',
+        weight: 10,
+        origin,
+        destination: dest,
+        customer,
+        urgency: 'high',
+    };
+    const resultA = ShipmentFactory.createShipment(optionsA);
     console.log(`-> Assigned Vehicle: ${resultA.recommendedVehicle.type}`);
     console.log(`-> Cost Strategy: ${resultA.shipment.cost > 1000 ? 'Premium (Air)' : 'Standard'}`);
 
     console.log('\nScenario B: Heavy Cargo (>5000kg)');
-    const resultB = ShipmentFactory.createShipment('TRK-B', 10000, origin, dest, customer, 'standard');
+    const optionsB: ShipmentOptions = {
+        trackingId: 'TRK-B',
+        weight: 10000,
+        origin,
+        destination: dest,
+        customer,
+        urgency: 'standard',
+    };
+    const resultB = ShipmentFactory.createShipment(optionsB);
     console.log(`-> Assigned Vehicle: ${resultB.recommendedVehicle.type}`);
 
     console.log('\nScenario C: Standard Package');
-    const resultC = ShipmentFactory.createShipment('TRK-C', 200, origin, dest, customer, 'standard');
+    const optionsC: ShipmentOptions = {
+        trackingId: 'TRK-C',
+        weight: 200,
+        origin,
+        destination: dest,
+        customer,
+        urgency: 'standard',
+    };
+    const resultC = ShipmentFactory.createShipment(optionsC);
     console.log(`-> Assigned Vehicle: ${resultC.recommendedVehicle.type}`);
 
     console.log('\n✅ VERIFICATION COMPLETE: All OOP systems functioning as designed.');

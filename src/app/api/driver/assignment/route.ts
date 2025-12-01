@@ -1,15 +1,21 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { emitShipmentUpdate, emitVehicleUpdate, emitAssignmentUpdate } from '@/lib/realtime';
+import { validateRequestBody, validateQueryParams, validationErrorResponse } from '@/lib/validate';
+import { getDriverAssignmentSchema, acceptJobSchema, completeDeliverySchema } from '@/lib/validations';
 
 export async function GET(request: Request) {
     try {
         const { searchParams } = new URL(request.url);
-        const driverId = searchParams.get('driverId');
-
-        if (!driverId) {
-            return NextResponse.json({ error: 'Driver ID required' }, { status: 400 });
+        
+        // Validate query parameters with Zod
+        const validation = validateQueryParams(searchParams, getDriverAssignmentSchema);
+        
+        if (!validation.success) {
+            return validationErrorResponse(validation.error);
         }
+        
+        const { driverId } = validation.data;
 
         // Get driver with their vehicle and any active shipment
         const driver = await prisma.user.findUnique({
@@ -68,12 +74,14 @@ export async function GET(request: Request) {
 // Accept a job
 export async function POST(request: Request) {
     try {
-        const body = await request.json();
-        const { driverId, shipmentId } = body;
-
-        if (!driverId || !shipmentId) {
-            return NextResponse.json({ error: 'Driver ID and Shipment ID required' }, { status: 400 });
+        // Validate request body with Zod
+        const validation = await validateRequestBody(request, acceptJobSchema);
+        
+        if ('error' in validation) {
+            return validation.error;
         }
+        
+        const { driverId, shipmentId } = validation.data;
 
         // Get driver's vehicle with current shipment
         const driver = await prisma.user.findUnique({
@@ -167,12 +175,14 @@ export async function POST(request: Request) {
 // Mark shipment as delivered
 export async function PATCH(request: Request) {
     try {
-        const body = await request.json();
-        const { shipmentId, driverId } = body;
-
-        if (!shipmentId) {
-            return NextResponse.json({ error: 'Shipment ID required' }, { status: 400 });
+        // Validate request body with Zod
+        const validation = await validateRequestBody(request, completeDeliverySchema);
+        
+        if ('error' in validation) {
+            return validation.error;
         }
+        
+        const { shipmentId, driverId } = validation.data;
 
         // Update shipment status to DELIVERED
         const updatedShipment = await prisma.shipment.update({

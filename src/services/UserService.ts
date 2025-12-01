@@ -14,16 +14,13 @@ export class UserService {
 
         if (!userRecord) return null;
 
-        // Pass the stored password hash (or empty string if not available)
-        const password = userRecord.password || '';
-
         switch (userRecord.role) {
             case 'CUSTOMER':
-                return new Customer(userRecord.id, userRecord.name, userRecord.email, password);
+                return new Customer(userRecord.id, userRecord.name, userRecord.email);
             case 'DRIVER':
-                return new Driver(userRecord.id, userRecord.name, userRecord.email, password);
+                return new Driver(userRecord.id, userRecord.name, userRecord.email);
             case 'ADMIN':
-                return new Admin(userRecord.id, userRecord.name, userRecord.email, password);
+                return new Admin(userRecord.id, userRecord.name, userRecord.email);
             default:
                 throw new Error(`Unknown role: ${userRecord.role}`);
         }
@@ -44,11 +41,11 @@ export class UserService {
 
         switch (role) {
             case UserRole.CUSTOMER:
-                return new Customer(userRecord.id, userRecord.name, userRecord.email, password);
+                return new Customer(userRecord.id, userRecord.name, userRecord.email);
             case UserRole.DRIVER:
-                return new Driver(userRecord.id, userRecord.name, userRecord.email, password);
+                return new Driver(userRecord.id, userRecord.name, userRecord.email);
             case UserRole.ADMIN:
-                return new Admin(userRecord.id, userRecord.name, userRecord.email, password);
+                return new Admin(userRecord.id, userRecord.name, userRecord.email);
             default:
                 throw new Error('Invalid role');
         }
