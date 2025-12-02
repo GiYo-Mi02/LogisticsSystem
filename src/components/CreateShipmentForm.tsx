@@ -2,7 +2,7 @@
 import { useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { motion } from 'framer-motion';
-import { PRESET_LOCATIONS, VehicleType, ExtendedLocation, LAND_CONNECTED_CONTINENTS, Continent } from '@/core/types';
+import { PRESET_LOCATIONS, VehicleType, ExtendedLocation, LAND_CONNECTIONS, Continent } from '@/core/types';
 
 const locationOptions = Object.entries(PRESET_LOCATIONS).map(([key, loc]) => ({
     value: key,
@@ -23,9 +23,10 @@ function analyzeRouteClient(origin: ExtendedLocation, destination: ExtendedLocat
     const destContinent = destination.continent;
     
     // Check if water crossing is required
-    const requiresWaterCrossing = originContinent !== destContinent && 
-        !(LAND_CONNECTED_CONTINENTS.includes(originContinent as Continent) && 
-          LAND_CONNECTED_CONTINENTS.includes(destContinent as Continent));
+    // Continents are land-connected if destination is in the origin's LAND_CONNECTIONS
+    const isLandConnected = originContinent === destContinent || 
+        LAND_CONNECTIONS[originContinent]?.includes(destContinent);
+    const requiresWaterCrossing = !isLandConnected;
     
     // Drone: max 500km distance
     const droneAvailable = distance <= 500;
@@ -95,9 +96,9 @@ export default function CreateShipmentForm({ customerId, onSuccess }: { customer
     const urgencyOptions = useMemo(() => {
         if (!routeAnalysis) {
             return [
-                { value: 'standard', label: 'STANDARD (GROUND)', icon: '🚛', available: true },
-                { value: 'high', label: 'EXPRESS (AIR)', icon: '🚁', available: true },
-                { value: 'low', label: 'ECONOMY (SEA)', icon: '🚢', available: true },
+                { value: 'standard', label: 'STANDARD (GROUND)', icon: '🚛', available: true, reason: undefined },
+                { value: 'high', label: 'EXPRESS (AIR)', icon: '🚁', available: true, reason: undefined },
+                { value: 'low', label: 'ECONOMY (SEA)', icon: '🚢', available: true, reason: undefined },
             ];
         }
 
