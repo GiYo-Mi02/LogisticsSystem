@@ -1081,5 +1081,3 @@ Combined with classic design patterns (Strategy, Factory, Builder), this archite
 - ✅ Real-world applicability
 
 ---
-
-_Generated for the Logistics Management System - A demonstration of Object-Oriented Programming principles_

@@ -1,13 +1,32 @@
 /**
- * INotifiable Interface
+ * INotifiable Interface - Notification Contract
  * =====================
- * ABSTRACTION: Defines a contract for objects that can receive notifications.
+ * @interface INotifiable
+ * @description Defines a contract for objects that can receive notifications.
+ * Demonstrates the Observer Pattern combined with Abstraction OOP principle.
  * 
- * This is an example of the Observer Pattern combined with Abstraction.
- * Different user types will implement notifications differently:
- * - Customers receive shipment updates
- * - Drivers receive job assignments
- * - Admins receive system alerts
+ * Different user types implement notifications differently:
+ * - **Customers**: Receive shipment updates and delivery notifications
+ * - **Drivers**: Receive job assignments and route updates
+ * - **Admins**: Receive system alerts and analytics reports
+ * 
+ * @example
+ * ```typescript
+ * class Customer implements INotifiable {
+ *   notify(message: string, type: NotificationType): void {
+ *     if (this.preferences.push) {
+ *       sendPushNotification(this.deviceToken, message);
+ *     }
+ *     if (this.preferences.email) {
+ *       sendEmail(this.email, message);
+ *     }
+ *   }
+ * }
+ * ```
+ * 
+ * @see User
+ * @see NotificationType
+ * @see NotificationPreferences
  */
 export interface INotifiable {
     /**

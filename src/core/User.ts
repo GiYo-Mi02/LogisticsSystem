@@ -16,9 +16,32 @@ import { BaseEntity } from './base/BaseEntity';
 /**
  * Abstract User Class
  * ===================
- * ABSTRACTION: Defines the contract for all user types.
- * INHERITANCE: Extends BaseEntity for common entity functionality.
- * ENCAPSULATION: Protects sensitive data like password and email.
+ * @abstract
+ * @class User
+ * @extends BaseEntity
+ * @implements INotifiable
+ * @description The base class for all user types in the LogIQ system.
+ * 
+ * **OOP Pillars Demonstrated:**
+ * - **ABSTRACTION**: Abstract class with abstract method viewDashboard()
+ * - **INHERITANCE**: Customer, Driver, Admin extend this class
+ * - **ENCAPSULATION**: Protects sensitive data like password and email
+ * 
+ * @example
+ * ```typescript
+ * // Cannot instantiate directly - use subclasses:
+ * const customer = new Customer('u-001', 'John Doe', 'john@email.com');
+ * const driver = new Driver('u-002', 'Jane Smith', 'jane@email.com');
+ * const admin = new Admin('u-003', 'Bob Admin', 'bob@email.com', 'super');
+ * 
+ * // Polymorphism - same method, different behavior:
+ * console.log(customer.viewDashboard()); // "Displaying Customer Dashboard..."
+ * console.log(driver.viewDashboard());   // "Displaying Driver Dashboard..."
+ * ```
+ * 
+ * @see Customer
+ * @see Driver
+ * @see Admin
  */
 export abstract class User extends BaseEntity implements INotifiable {
     // ENCAPSULATION: Private fields with controlled access
@@ -47,10 +70,24 @@ export abstract class User extends BaseEntity implements INotifiable {
 
     // ==================== ENCAPSULATION: Getters & Setters ====================
 
+    /**
+     * Gets the user's display name.
+     * @returns {string} The user's name.
+     */
     public get name(): string {
         return this._name;
     }
 
+    /**
+     * Sets the user's display name with validation.
+     * @param {string} value - The new name (minimum 2 characters).
+     * @throws {Error} If name is less than 2 characters.
+     * @example
+     * ```typescript
+     * user.name = 'John Doe'; // Valid
+     * user.name = 'J';        // Throws Error
+     * ```
+     */
     public set name(value: string) {
         if (value.trim().length < 2) {
             throw new Error('Name must be at least 2 characters');
@@ -59,10 +96,24 @@ export abstract class User extends BaseEntity implements INotifiable {
         this.touch(); // Update timestamp
     }
 
+    /**
+     * Gets the user's email address.
+     * @returns {string} The user's email in lowercase.
+     */
     public get email(): string {
         return this._email;
     }
 
+    /**
+     * Sets the user's email with format validation.
+     * @param {string} value - The new email address.
+     * @throws {Error} If email format is invalid.
+     * @example
+     * ```typescript
+     * user.email = 'john@example.com'; // Valid
+     * user.email = 'invalid-email';    // Throws Error
+     * ```
+     */
     public set email(value: string) {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(value)) {
@@ -72,7 +123,13 @@ export abstract class User extends BaseEntity implements INotifiable {
         this.touch();
     }
 
-    // Password is write-only for security (no getter)
+    /**
+     * Sets the user's password with security validation.
+     * @param {string} value - The new password (minimum 8 characters).
+     * @throws {Error} If password is less than 8 characters.
+     * @description Password is write-only for security - no getter exists.
+     * In production, this would hash the password before storing.
+     */
     public set password(value: string) {
         if (value.length < 8) {
             throw new Error('Password must be at least 8 characters');
@@ -82,6 +139,10 @@ export abstract class User extends BaseEntity implements INotifiable {
         this.touch();
     }
 
+    /**
+     * Gets the user's role.
+     * @returns {UserRole} The user's role (CUSTOMER, DRIVER, or ADMIN).
+     */
     public getRole(): UserRole {
         return this.role;
     }
@@ -89,14 +150,34 @@ export abstract class User extends BaseEntity implements INotifiable {
     // ==================== ABSTRACTION: Abstract Methods ====================
 
     /**
-     * Abstract method to be implemented by concrete classes.
-     * Each user type sees a different dashboard.
-     * POLYMORPHISM: Same method signature, different behavior.
+     * View the user's role-specific dashboard.
+     * @abstract
+     * @returns {string} A description of the dashboard content.
+     * @description Each user type sees a different dashboard.
+     * **POLYMORPHISM**: Same method signature, different behavior.
+     * - Customer: Active shipments, create new shipment, track orders
+     * - Driver: Current assignment, route map, earnings
+     * - Admin: Fleet overview, system analytics, user management
+     * @example
+     * ```typescript
+     * const user: User = getUserById('u-001');
+     * console.log(user.viewDashboard()); // Output depends on user type
+     * ```
      */
     abstract viewDashboard(): string;
 
     /**
-     * Abstract method for role-specific actions
+     * Get the permissions available to this user type.
+     * @abstract
+     * @returns {string[]} An array of permission strings.
+     * @description Permissions vary by role for security.
+     * @example
+     * ```typescript
+     * const permissions = user.getPermissions();
+     * if (permissions.includes('manage_fleet')) {
+     *   showFleetManagement();
+     * }
+     * ```
      */
     abstract getPermissions(): string[];
 
@@ -150,11 +231,28 @@ export abstract class User extends BaseEntity implements INotifiable {
 }
 
 /**
+ * Customer Class - Concrete User Implementation
  * ============================================================================
- * CUSTOMER CLASS - Concrete Implementation
- * ============================================================================
- * INHERITANCE: Extends User
- * POLYMORPHISM: Implements abstract methods with customer-specific behavior
+ * @class Customer
+ * @extends User
+ * @description Represents a customer who can create and track shipments.
+ * 
+ * **OOP Pillars:**
+ * - **INHERITANCE**: Extends User class
+ * - **POLYMORPHISM**: Implements abstract methods with customer-specific behavior
+ * - **ENCAPSULATION**: Private loyalty points and shipment history
+ * 
+ * @example
+ * ```typescript
+ * const customer = new Customer('c-001', 'John Doe', 'john@email.com');
+ * 
+ * // Create a shipment
+ * const trackingId = customer.createShipment({ weight: 25, origin: {...} });
+ * 
+ * // Earn and redeem loyalty points
+ * customer.addLoyaltyPoints(100);
+ * customer.redeemPoints(50); // Returns true, deducts 50 points
+ * ```
  */
 export class Customer extends User {
     // ENCAPSULATION: Customer-specific private field
@@ -210,11 +308,33 @@ export class Customer extends User {
 }
 
 /**
+ * Driver Class - Concrete User Implementation
  * ============================================================================
- * DRIVER CLASS - Concrete Implementation
- * ============================================================================
- * INHERITANCE: Extends User
- * POLYMORPHISM: Implements abstract methods with driver-specific behavior
+ * @class Driver
+ * @extends User
+ * @description Represents a driver who delivers shipments using assigned vehicles.
+ * 
+ * **Features:**
+ * - Vehicle assignment and management
+ * - Real-time location tracking
+ * - Job acceptance and completion
+ * - Performance rating system
+ * 
+ * @example
+ * ```typescript
+ * const driver = new Driver('d-001', 'Jane Smith', 'jane@email.com');
+ * 
+ * // Assign vehicle and accept job
+ * driver.assignVehicle('v-001');
+ * driver.acceptJob('ship-001');
+ * 
+ * // Update location during delivery
+ * driver.updateLocation(40.7128, -74.0060);
+ * 
+ * // Complete delivery
+ * driver.completeDelivery();
+ * console.log(driver.completedDeliveries); // 1
+ * ```
  */
 export class Driver extends User {
     // ENCAPSULATION: Driver-specific private fields
@@ -300,11 +420,28 @@ export class Driver extends User {
 }
 
 /**
+ * Admin Class - Concrete User Implementation
  * ============================================================================
- * ADMIN CLASS - Concrete Implementation
- * ============================================================================
- * INHERITANCE: Extends User
- * POLYMORPHISM: Implements abstract methods with admin-specific behavior
+ * @class Admin
+ * @extends User
+ * @description Represents an administrator with system management capabilities.
+ * 
+ * **Access Levels:**
+ * - **standard**: Fleet management, view analytics, manage drivers
+ * - **super**: All standard permissions + manage admins, system settings, billing
+ * 
+ * @example
+ * ```typescript
+ * const admin = new Admin('a-001', 'Bob Admin', 'bob@email.com', 'super');
+ * 
+ * // Manage fleet and generate reports
+ * admin.manageFleet();
+ * const report = admin.generateReport('monthly-revenue');
+ * 
+ * // Assign regions to manage
+ * admin.assignRegion('North America');
+ * console.log(admin.getManagedRegions()); // ['North America']
+ * ```
  */
 export class Admin extends User {
     // ENCAPSULATION: Admin-specific private fields

@@ -1,8 +1,8 @@
 'use client';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { motion } from 'framer-motion';
-import { PRESET_LOCATIONS } from '@/core/types';
+import { PRESET_LOCATIONS, VehicleType, ExtendedLocation, LAND_CONNECTED_CONTINENTS, Continent } from '@/core/types';
 
 const locationOptions = Object.entries(PRESET_LOCATIONS).map(([key, loc]) => ({
     value: key,
@@ -10,18 +10,63 @@ const locationOptions = Object.entries(PRESET_LOCATIONS).map(([key, loc]) => ({
     fullLabel: `${loc.address}, ${loc.city}, ${loc.country}`,
 }));
 
+/**
+ * Client-side route analysis for transport availability
+ * Mirrors the logic from RouteAnalyzer for UI purposes
+ */
+function analyzeRouteClient(origin: ExtendedLocation, destination: ExtendedLocation) {
+    const latDiff = destination.lat - origin.lat;
+    const lngDiff = destination.lng - origin.lng;
+    const distance = Math.sqrt(latDiff * latDiff + lngDiff * lngDiff) * 111; // km
+    
+    const originContinent = origin.continent;
+    const destContinent = destination.continent;
+    
+    // Check if water crossing is required
+    const requiresWaterCrossing = originContinent !== destContinent && 
+        !(LAND_CONNECTED_CONTINENTS.includes(originContinent as Continent) && 
+          LAND_CONNECTED_CONTINENTS.includes(destContinent as Continent));
+    
+    // Drone: max 500km distance
+    const droneAvailable = distance <= 500;
+    const droneReason = !droneAvailable ? `Distance ${distance.toFixed(0)}km exceeds drone range (500km)` : undefined;
+    
+    // Truck: can only travel on connected land masses
+    const truckAvailable = !requiresWaterCrossing;
+    const truckReason = !truckAvailable 
+        ? `Truck cannot cross water from ${originContinent} to ${destContinent}` 
+        : undefined;
+    
+    // Ship: requires water crossing or coastal route
+    const shipAvailable = requiresWaterCrossing || distance > 100;
+    const shipReason = !shipAvailable ? 'Ship route not practical for short land distances' : undefined;
+    
+    return {
+        distance,
+        requiresWaterCrossing,
+        originContinent,
+        destContinent,
+        availability: {
+            drone: { available: droneAvailable, reason: droneReason },
+            truck: { available: truckAvailable, reason: truckReason },
+            ship: { available: shipAvailable, reason: shipReason },
+        }
+    };
+}
+
 export default function CreateShipmentForm({ customerId, onSuccess }: { customerId: string, onSuccess?: () => void }) {
     const { 
         register, 
         handleSubmit, 
         formState: { errors }, 
-        watch 
+        watch,
+        setValue 
     } = useForm({
         defaultValues: {
             weight: '' as unknown as number,
             origin: '',
             destination: '',
-            urgency: 'standard' as const,
+            urgency: 'standard' as 'standard' | 'high' | 'low',
         },
     });
     const [isLoading, setIsLoading] = useState(false);
@@ -30,6 +75,71 @@ export default function CreateShipmentForm({ customerId, onSuccess }: { customer
 
     const selectedOrigin = watch('origin');
     const selectedDest = watch('destination');
+    const selectedUrgency = watch('urgency');
+
+    // Analyze route when both locations are selected
+    const routeAnalysis = useMemo(() => {
+        if (!selectedOrigin || !selectedDest || selectedOrigin === selectedDest) {
+            return null;
+        }
+        
+        const originLoc = PRESET_LOCATIONS[selectedOrigin] as ExtendedLocation;
+        const destLoc = PRESET_LOCATIONS[selectedDest] as ExtendedLocation;
+        
+        if (!originLoc || !destLoc) return null;
+        
+        return analyzeRouteClient(originLoc, destLoc);
+    }, [selectedOrigin, selectedDest]);
+
+    // Get available urgency options based on route
+    const urgencyOptions = useMemo(() => {
+        if (!routeAnalysis) {
+            return [
+                { value: 'standard', label: 'STANDARD (GROUND)', icon: '🚛', available: true },
+                { value: 'high', label: 'EXPRESS (AIR)', icon: '🚁', available: true },
+                { value: 'low', label: 'ECONOMY (SEA)', icon: '🚢', available: true },
+            ];
+        }
+
+        const { availability, requiresWaterCrossing, distance } = routeAnalysis;
+        
+        return [
+            { 
+                value: 'standard', 
+                label: 'STANDARD (GROUND)', 
+                icon: '🚛', 
+                available: availability.truck.available,
+                reason: availability.truck.reason
+            },
+            { 
+                value: 'high', 
+                label: 'EXPRESS (AIR)', 
+                icon: '🚁', 
+                available: availability.drone.available,
+                reason: availability.drone.reason
+            },
+            { 
+                value: 'low', 
+                label: 'ECONOMY (SEA)', 
+                icon: '🚢', 
+                available: availability.ship.available,
+                reason: availability.ship.reason
+            },
+        ];
+    }, [routeAnalysis]);
+
+    // Auto-select first available urgency when route changes
+    useMemo(() => {
+        if (routeAnalysis) {
+            const currentOption = urgencyOptions.find(opt => opt.value === selectedUrgency);
+            if (currentOption && !currentOption.available) {
+                const firstAvailable = urgencyOptions.find(opt => opt.available);
+                if (firstAvailable) {
+                    setValue('urgency', firstAvailable.value as 'standard' | 'high' | 'low');
+                }
+            }
+        }
+    }, [routeAnalysis, urgencyOptions, selectedUrgency, setValue]);
 
     const onSubmit = async (data: { weight: number; origin: string; destination: string; urgency: string }) => {
         setIsLoading(true);
@@ -103,14 +213,20 @@ export default function CreateShipmentForm({ customerId, onSuccess }: { customer
                         {errors.weight && <span className="text-red-400 text-xs">Required</span>}
                     </div>
                     <div>
-                        <label className="block text-xs text-gray-400 mb-1">URGENCY</label>
+                        <label className="block text-xs text-gray-400 mb-1">TRANSPORT MODE</label>
                         <select
                             {...register('urgency')}
                             className="w-full bg-black/20 border border-white/10 rounded p-2 text-white focus:border-cyan-400 focus:outline-none transition-colors"
                         >
-                            <option value="standard">STANDARD (GROUND)</option>
-                            <option value="high">EXPRESS (AIR)</option>
-                            <option value="low">ECONOMY (SEA)</option>
+                            {urgencyOptions.map(opt => (
+                                <option 
+                                    key={opt.value} 
+                                    value={opt.value}
+                                    disabled={!opt.available}
+                                >
+                                    {opt.icon} {opt.label} {!opt.available ? '(UNAVAILABLE)' : ''}
+                                </option>
+                            ))}
                         </select>
                     </div>
                 </div>
@@ -170,21 +286,65 @@ export default function CreateShipmentForm({ customerId, onSuccess }: { customer
                     {errors.destination && <span className="text-red-400 text-xs">Please select destination</span>}
                 </div>
 
-                {/* Route Preview */}
+                {/* Route Preview with Transport Restrictions */}
                 {selectedOrigin && selectedDest && selectedOrigin !== selectedDest && (
                     <motion.div
                         initial={{ opacity: 0, y: -10 }}
                         animate={{ opacity: 1, y: 0 }}
                         className="p-3 bg-white/5 rounded-lg border border-white/10"
                     >
-                        <p className="text-xs text-gray-400 mb-2">ROUTE PREVIEW</p>
-                        <div className="flex items-center gap-2 text-sm">
+                        <p className="text-xs text-gray-400 mb-2">ROUTE ANALYSIS</p>
+                        <div className="flex items-center gap-2 text-sm mb-3">
                             <span className="text-cyan-400">{PRESET_LOCATIONS[selectedOrigin]?.city}</span>
                             <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
                             </svg>
                             <span className="text-purple-400">{PRESET_LOCATIONS[selectedDest]?.city}</span>
                         </div>
+
+                        {routeAnalysis && (
+                            <div className="space-y-2">
+                                <div className="flex items-center gap-2 text-xs">
+                                    <span className="text-gray-500">Distance:</span>
+                                    <span className="text-white font-mono">{routeAnalysis.distance.toFixed(0)} km</span>
+                                </div>
+                                
+                                {routeAnalysis.requiresWaterCrossing && (
+                                    <div className="flex items-center gap-2 text-xs">
+                                        <span className="text-blue-400">🌊 Water crossing required</span>
+                                        <span className="text-gray-500">
+                                            ({routeAnalysis.originContinent} → {routeAnalysis.destContinent})
+                                        </span>
+                                    </div>
+                                )}
+
+                                <div className="pt-2 border-t border-white/10">
+                                    <p className="text-xs text-gray-400 mb-2">AVAILABLE TRANSPORT:</p>
+                                    <div className="flex flex-wrap gap-2">
+                                        {urgencyOptions.map(opt => (
+                                            <span 
+                                                key={opt.value}
+                                                className={`text-xs px-2 py-1 rounded ${
+                                                    opt.available 
+                                                        ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
+                                                        : 'bg-red-500/20 text-red-400 border border-red-500/30 line-through'
+                                                }`}
+                                                title={opt.reason || 'Available'}
+                                            >
+                                                {opt.icon} {opt.value.toUpperCase()}
+                                            </span>
+                                        ))}
+                                    </div>
+                                    
+                                    {/* Show restriction reasons */}
+                                    {urgencyOptions.filter(opt => !opt.available).map(opt => (
+                                        <p key={opt.value} className="text-xs text-red-400/70 mt-1">
+                                            ⚠️ {opt.reason}
+                                        </p>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </motion.div>
                 )}
 

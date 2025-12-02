@@ -9,6 +9,7 @@ import {
     SeaPricingStrategy,
     PricingStrategyFactory 
 } from './PricingStrategy';
+import { RouteAnalyzer, TransportAvailability } from './RouteAnalyzer';
 
 /**
  * ============================================================================
@@ -305,6 +306,7 @@ export class ShipmentFactory {
     /**
      * Determine the optimal delivery method
      * ENCAPSULATION: Complex decision logic hidden from clients
+     * Uses RouteAnalyzer for realistic geographic constraints
      */
     private static determineOptimalDelivery(
         weight: number,
@@ -314,30 +316,52 @@ export class ShipmentFactory {
     ): { vehicle: Vehicle; strategy: PricingStrategy; estimatedDays: number } {
         const distance = this.calculateDistance(origin, destination);
         
-        // Decision matrix for vehicle selection
+        // Get available transport modes based on geographic constraints
+        const availability = RouteAnalyzer.getAvailableTransportModes(origin, destination, weight);
+        
+        // Decision matrix for vehicle selection (respecting geographic constraints)
         let vehicleType: VehicleType;
         let strategyType: 'air' | 'ground' | 'sea';
 
-        if (urgency === 'critical' && weight <= 10) {
-            // Critical & Very Light -> Priority Drone
+        // Check what modes are available for this route
+        const canUseDrone = availability.droneAvailable;
+        const canUseTruck = availability.truckAvailable;
+        const canUseShip = availability.shipAvailable;
+
+        if (urgency === 'critical' && weight <= 10 && canUseDrone) {
+            // Critical & Very Light -> Priority Drone (if available)
             vehicleType = VehicleType.DRONE;
             strategyType = 'air';
-        } else if (urgency === 'high' && weight <= 50) {
-            // Urgent & Light -> Drone
+        } else if (urgency === 'high' && weight <= 50 && canUseDrone) {
+            // Urgent & Light -> Drone (if available)
             vehicleType = VehicleType.DRONE;
             strategyType = 'air';
-        } else if (weight > 5000 || urgency === 'low') {
-            // Heavy or Not Urgent -> Ship
+        } else if ((weight > 5000 || urgency === 'low') && canUseShip) {
+            // Heavy or Not Urgent -> Ship (if available)
             vehicleType = VehicleType.SHIP;
             strategyType = 'sea';
-        } else if (weight > 1000) {
-            // Medium Heavy -> Large Truck
+        } else if (canUseTruck && weight <= 1000) {
+            // Standard -> Truck (if land-connected)
             vehicleType = VehicleType.TRUCK;
             strategyType = 'ground';
+        } else if (canUseTruck && weight > 1000) {
+            // Medium Heavy -> Large Truck (if land-connected)
+            vehicleType = VehicleType.TRUCK;
+            strategyType = 'ground';
+        } else if (canUseShip) {
+            // Fallback to Ship for water crossings
+            vehicleType = VehicleType.SHIP;
+            strategyType = 'sea';
+        } else if (canUseDrone && weight <= 50) {
+            // Fallback to Drone for short distances
+            vehicleType = VehicleType.DRONE;
+            strategyType = 'air';
         } else {
-            // Standard -> Truck
-            vehicleType = VehicleType.TRUCK;
-            strategyType = 'ground';
+            // No suitable transport available - throw error
+            throw new Error(
+                `No suitable transport available for this route. ` +
+                `${availability.truckReason || 'Route constraints prevent delivery.'}`
+            );
         }
 
         // Create vehicle and strategy
@@ -385,6 +409,86 @@ export class ShipmentFactory {
         const timestamp = Date.now().toString(36).toUpperCase();
         const random = Math.random().toString(36).substr(2, 6).toUpperCase();
         return `TRK-${timestamp}-${random}`;
+    }
+
+    /**
+     * Get available transport modes for a route
+     * ABSTRACTION: Exposes RouteAnalyzer functionality through factory interface
+     * @param origin - The origin location
+     * @param destination - The destination location
+     * @returns Array of available vehicle types with availability details
+     */
+    public static getAvailableTransportModes(
+        origin: Location,
+        destination: Location
+    ): { modes: VehicleType[]; availability: TransportAvailability } {
+        const modes = RouteAnalyzer.getAvailableTransportModes(origin, destination);
+        const availability = RouteAnalyzer.getTransportAvailability(origin, destination);
+        return { modes, availability };
+    }
+
+    /**
+     * Validate if a specific transport mode can be used for a route
+     * @param mode - The vehicle type to validate
+     * @param origin - The origin location
+     * @param destination - The destination location
+     * @returns Object with valid flag and reason if invalid
+     */
+    public static validateTransportMode(
+        mode: VehicleType,
+        origin: Location,
+        destination: Location
+    ): { valid: boolean; reason?: string } {
+        const isValid = RouteAnalyzer.isTransportModeValid(mode, origin, destination);
+        if (isValid) {
+            return { valid: true };
+        }
+
+        const availability = RouteAnalyzer.getTransportAvailability(origin, destination);
+        let reason: string;
+
+        switch (mode) {
+            case VehicleType.DRONE:
+                reason = availability.drone.reason || 'Drone cannot be used for this route';
+                break;
+            case VehicleType.TRUCK:
+                reason = availability.truck.reason || 'Truck cannot be used for this route';
+                break;
+            case VehicleType.SHIP:
+                reason = availability.ship.reason || 'Ship cannot be used for this route';
+                break;
+            default:
+                reason = 'Unknown transport mode';
+        }
+
+        return { valid: false, reason };
+    }
+
+    /**
+     * Get the recommended transport mode for a route
+     * @param origin - The origin location
+     * @param destination - The destination location
+     * @param weight - Package weight in kg
+     * @param urgency - Delivery urgency level
+     * @returns The recommended vehicle type
+     */
+    public static getRecommendedTransportMode(
+        origin: Location,
+        destination: Location,
+        weight: number,
+        urgency: 'critical' | 'high' | 'standard' | 'low'
+    ): VehicleType {
+        return RouteAnalyzer.getRecommendedMode(origin, destination, weight, urgency);
+    }
+
+    /**
+     * Get route information including geographic analysis
+     * @param origin - The origin location
+     * @param destination - The destination location
+     * @returns Detailed route analysis
+     */
+    public static analyzeRoute(origin: Location, destination: Location) {
+        return RouteAnalyzer.analyzeRoute(origin, destination);
     }
 }
 

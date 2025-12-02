@@ -15,7 +15,12 @@ import { BaseEntity } from './base/BaseEntity';
 
 /**
  * VehicleStatus Enum
- * Encapsulates the possible states of a vehicle
+ * @enum {string}
+ * @description Encapsulates the possible operational states of a vehicle.
+ * @property {string} IDLE - Vehicle is available and not assigned
+ * @property {string} IN_TRANSIT - Vehicle is currently delivering a shipment
+ * @property {string} MAINTENANCE - Vehicle is undergoing maintenance
+ * @property {string} OUT_OF_SERVICE - Vehicle is not available for use
  */
 export enum VehicleStatus {
     IDLE = 'IDLE',
@@ -27,12 +32,38 @@ export enum VehicleStatus {
 /**
  * Abstract Vehicle Class
  * ======================
- * ABSTRACTION: Defines the common interface for all vehicle types.
- * INHERITANCE: Extends BaseEntity, implements ITrackable.
- * ENCAPSULATION: Private fields with controlled access.
+ * @abstract
+ * @class Vehicle
+ * @extends BaseEntity
+ * @implements ITrackable
+ * @description Base class for all vehicle types in the logistics fleet.
  * 
- * This is an ABSTRACT class - you cannot instantiate it directly.
- * You MUST use one of the concrete subclasses: Drone, Truck, or Ship.
+ * **OOP Pillars Demonstrated:**
+ * - **ABSTRACTION**: Abstract class with abstract methods move(), calculateFuelConsumption(), getMaxSpeed()
+ * - **INHERITANCE**: Drone, Truck, Ship extend this class; Vehicle extends BaseEntity
+ * - **ENCAPSULATION**: Private fields with controlled access
+ * - **POLYMORPHISM**: Each vehicle type implements movement differently
+ * 
+ * **Note:** Cannot instantiate directly - use concrete subclasses:
+ * - {@link Drone} - Aerial delivery (fast, lightweight)
+ * - {@link Truck} - Ground delivery (versatile, high capacity)
+ * - {@link Ship} - Maritime delivery (bulk cargo, economical)
+ * 
+ * @example
+ * ```typescript
+ * // Polymorphic usage:
+ * const vehicles: Vehicle[] = [
+ *   new Drone('d1', 'DRN-001', 120),
+ *   new Truck('t1', 'TRK-001', 4),
+ *   new Ship('s1', 'SHP-001', 1000)
+ * ];
+ * 
+ * // Same code, different behavior:
+ * vehicles.forEach(v => {
+ *   const route = v.move(origin, destination);
+ *   console.log(`${v.type}: ${route.distance}km`);
+ * });
+ * ```
  */
 export abstract class Vehicle extends BaseEntity implements ITrackable {
     // ENCAPSULATION: Private fields - cannot be accessed directly
@@ -129,23 +160,48 @@ export abstract class Vehicle extends BaseEntity implements ITrackable {
     // ==================== ABSTRACTION: Abstract Methods ====================
 
     /**
-     * Abstract method for movement calculation.
-     * POLYMORPHISM: Each subclass implements this differently:
-     * - Drone: Straight line (geodesic) flight path
-     * - Truck: Road network with turns
-     * - Ship: Maritime routes with sea lane considerations
+     * Calculate the route and move the vehicle between two locations.
+     * @abstract
+     * @param {Location} from - The starting location coordinates.
+     * @param {Location} to - The destination location coordinates.
+     * @returns {Route} The calculated route with path, distance, and estimated time.
+     * @description **POLYMORPHISM**: Each subclass implements this differently:
+     * - **Drone**: Geodesic (straight line) flight path
+     * - **Truck**: Road network with Manhattan distance
+     * - **Ship**: Maritime routes with sea lane considerations (30% longer)
+     * 
+     * @example
+     * ```typescript
+     * const drone = new Drone('d1', 'DRN-001', 120);
+     * const route = drone.move(
+     *   { lat: 40.7128, lng: -74.0060 }, // NYC
+     *   { lat: 34.0522, lng: -118.2437 } // LA
+     * );
+     * console.log(route.distance); // ~3940 km (direct flight)
+     * ```
      */
     abstract move(from: Location, to: Location): Route;
 
     /**
-     * Abstract method for calculating fuel consumption.
-     * POLYMORPHISM: Different vehicles consume fuel at different rates.
+     * Calculate fuel consumption for a given distance.
+     * @abstract
+     * @param {number} distance - The distance in kilometers.
+     * @returns {number} The fuel units consumed.
+     * @description **POLYMORPHISM**: Different vehicles have different fuel efficiency:
+     * - Drone: 0.5 units/km (battery)
+     * - Truck: 0.3 L/km (diesel) + trailer modifier
+     * - Ship: 5 units/km (bunker fuel) + load modifier
      */
     abstract calculateFuelConsumption(distance: number): number;
 
     /**
-     * Abstract method for maximum speed.
-     * POLYMORPHISM: Each vehicle type has different speed characteristics.
+     * Get the maximum speed of this vehicle type.
+     * @abstract
+     * @returns {number} Maximum speed in km/h.
+     * @description **POLYMORPHISM**: Each vehicle has different speed:
+     * - Drone: 60 km/h
+     * - Truck: 70-90 km/h (depends on trailer)
+     * - Ship: 35 km/h (~19 knots)
      */
     abstract getMaxSpeed(): number;
 
@@ -262,11 +318,34 @@ export abstract class Vehicle extends BaseEntity implements ITrackable {
 }
 
 /**
+ * Drone Class - Aerial Vehicle Implementation
  * ============================================================================
- * DRONE CLASS - Concrete Implementation
- * ============================================================================
- * INHERITANCE: Extends Vehicle
- * POLYMORPHISM: Implements abstract methods with drone-specific behavior
+ * @class Drone
+ * @extends Vehicle
+ * @description Unmanned aerial vehicle for fast, lightweight deliveries.
+ * 
+ * **Characteristics:**
+ * - Capacity: 50 kg maximum
+ * - Speed: 60 km/h
+ * - Range: Limited by battery (100 units)
+ * - Path: Geodesic (straight line)
+ * 
+ * **Use Cases:**
+ * - Urgent deliveries under 50kg
+ * - Short to medium distances
+ * - Areas with difficult road access
+ * 
+ * @example
+ * ```typescript
+ * const drone = new Drone('d-001', 'DRN-001', 120);
+ * 
+ * // Take off and deliver
+ * drone.takeOff(100); // Fly at 100m altitude
+ * const route = drone.move(origin, destination);
+ * drone.land();
+ * 
+ * console.log(`Delivered in ${route.estimatedTime} minutes`);
+ * ```
  */
 export class Drone extends Vehicle {
     // ENCAPSULATION: Drone-specific private fields
@@ -361,11 +440,35 @@ export class Drone extends Vehicle {
 }
 
 /**
+ * Truck Class - Ground Vehicle Implementation
  * ============================================================================
- * TRUCK CLASS - Concrete Implementation
- * ============================================================================
- * INHERITANCE: Extends Vehicle
- * POLYMORPHISM: Implements abstract methods with truck-specific behavior
+ * @class Truck
+ * @extends Vehicle
+ * @description Heavy-duty ground vehicle for versatile cargo delivery.
+ * 
+ * **Characteristics:**
+ * - Capacity: 5,000 kg maximum
+ * - Speed: 70-90 km/h (depends on trailer)
+ * - Fuel: 500 L tank, 0.3 L/km
+ * - Path: Road network (Manhattan distance)
+ * 
+ * **Use Cases:**
+ * - Medium to heavy cargo (100-5000 kg)
+ * - Long-distance ground transport
+ * - Bulk deliveries with trailer
+ * 
+ * @example
+ * ```typescript
+ * const truck = new Truck('t-001', 'TRK-001', 4);
+ * 
+ * // Attach trailer for extra capacity
+ * truck.attachTrailer();
+ * console.log(truck.getMaxSpeed()); // 70 km/h (reduced with trailer)
+ * 
+ * // Calculate route
+ * const route = truck.move(origin, destination);
+ * console.log(`Mileage: ${truck.mileage} km`);
+ * ```
  */
 export class Truck extends Vehicle {
     // ENCAPSULATION: Truck-specific private fields
@@ -459,11 +562,38 @@ export class Truck extends Vehicle {
 }
 
 /**
+ * Ship Class - Maritime Vehicle Implementation
  * ============================================================================
- * SHIP CLASS - Concrete Implementation
- * ============================================================================
- * INHERITANCE: Extends Vehicle
- * POLYMORPHISM: Implements abstract methods with ship-specific behavior
+ * @class Ship
+ * @extends Vehicle
+ * @description Cargo vessel for bulk maritime shipping.
+ * 
+ * **Characteristics:**
+ * - Capacity: 50,000 kg maximum (1000+ containers)
+ * - Speed: 35 km/h (~19 knots)
+ * - Fuel: 10,000 unit tank
+ * - Path: Maritime routes (30% longer than direct)
+ * 
+ * **Use Cases:**
+ * - Bulk cargo over 5,000 kg
+ * - International shipping
+ * - Non-urgent, economical transport
+ * 
+ * @example
+ * ```typescript
+ * const ship = new Ship('s-001', 'SHP-001', 1000);
+ * 
+ * // Load containers
+ * ship.loadContainers(500);
+ * 
+ * // Check port compatibility
+ * if (ship.checkPortCompatibility(15)) {
+ *   const route = ship.move(portA, portB);
+ * }
+ * 
+ * // Unload at destination
+ * ship.unloadContainers(500);
+ * ```
  */
 export class Ship extends Vehicle {
     // ENCAPSULATION: Ship-specific private fields

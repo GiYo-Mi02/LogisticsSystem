@@ -1,11 +1,30 @@
 /**
- * IPayable Interface
+ * IPayable Interface - Payment Contract
  * ==================
- * ABSTRACTION: Defines a contract for entities that can process payments.
+ * @interface IPayable
+ * @description Defines a contract for entities that can process payments.
+ * Demonstrates ABSTRACTION by abstracting payment processing logic.
  * 
- * This interface abstracts the payment processing logic, allowing
- * different payment methods to be implemented without changing
- * the calling code.
+ * Allows different payment methods (credit card, PayPal, crypto) to be
+ * implemented without changing the calling code.
+ * 
+ * @example
+ * ```typescript
+ * async function processOrder(payable: IPayable, amount: number) {
+ *   const result = await payable.processPayment(amount);
+ *   if (result.success) {
+ *     console.log(`Payment successful: ${result.transactionId}`);
+ *   }
+ * }
+ * 
+ * // Works with any IPayable implementation:
+ * await processOrder(shipment, 150.00);
+ * await processOrder(subscription, 29.99);
+ * ```
+ * 
+ * @see Shipment
+ * @see PaymentResult
+ * @see PaymentRecord
  */
 export interface IPayable {
     /**
