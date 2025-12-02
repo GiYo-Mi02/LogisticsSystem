@@ -422,9 +422,8 @@ export class ShipmentFactory {
         origin: Location,
         destination: Location
     ): { modes: VehicleType[]; availability: TransportAvailability } {
-        const modes = RouteAnalyzer.getAvailableTransportModes(origin, destination);
-        const availability = RouteAnalyzer.getTransportAvailability(origin, destination);
-        return { modes, availability };
+        const availability = RouteAnalyzer.getAvailableTransportModes(origin, destination);
+        return { modes: availability.availableVehicles, availability };
     }
 
     /**
@@ -439,23 +438,24 @@ export class ShipmentFactory {
         origin: Location,
         destination: Location
     ): { valid: boolean; reason?: string } {
-        const isValid = RouteAnalyzer.isTransportModeValid(mode, origin, destination);
+        const availability = RouteAnalyzer.getAvailableTransportModes(origin, destination);
+        const isValid = availability.availableVehicles.includes(mode);
+        
         if (isValid) {
             return { valid: true };
         }
 
-        const availability = RouteAnalyzer.getTransportAvailability(origin, destination);
         let reason: string;
 
         switch (mode) {
             case VehicleType.DRONE:
-                reason = availability.drone.reason || 'Drone cannot be used for this route';
+                reason = availability.droneReason || 'Drone cannot be used for this route';
                 break;
             case VehicleType.TRUCK:
-                reason = availability.truck.reason || 'Truck cannot be used for this route';
+                reason = availability.truckReason || 'Truck cannot be used for this route';
                 break;
             case VehicleType.SHIP:
-                reason = availability.ship.reason || 'Ship cannot be used for this route';
+                reason = availability.shipReason || 'Ship cannot be used for this route';
                 break;
             default:
                 reason = 'Unknown transport mode';
@@ -469,16 +469,17 @@ export class ShipmentFactory {
      * @param origin - The origin location
      * @param destination - The destination location
      * @param weight - Package weight in kg
-     * @param urgency - Delivery urgency level
+     * @param _urgency - Delivery urgency level (reserved for future use)
      * @returns The recommended vehicle type
      */
     public static getRecommendedTransportMode(
         origin: Location,
         destination: Location,
         weight: number,
-        urgency: 'critical' | 'high' | 'standard' | 'low'
+        _urgency: 'critical' | 'high' | 'standard' | 'low'
     ): VehicleType {
-        return RouteAnalyzer.getRecommendedMode(origin, destination, weight, urgency);
+        const availability = RouteAnalyzer.getAvailableTransportModes(origin, destination, weight);
+        return availability.recommendedVehicle;
     }
 
     /**
@@ -487,8 +488,8 @@ export class ShipmentFactory {
      * @param destination - The destination location
      * @returns Detailed route analysis
      */
-    public static analyzeRoute(origin: Location, destination: Location) {
-        return RouteAnalyzer.analyzeRoute(origin, destination);
+    public static analyzeRoute(origin: Location, destination: Location): TransportAvailability {
+        return RouteAnalyzer.getAvailableTransportModes(origin, destination);
     }
 }
 
