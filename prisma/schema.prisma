@@ -93,6 +93,9 @@ model Shipment {
   weight      Float
   status      ShipmentStatus @default(PENDING)
   
+  // Transport mode - which type of vehicle should handle this shipment
+  transportMode VehicleType?
+  
   // Origin Location (human-readable + coordinates)
   originAddress String?
   originCity    String?

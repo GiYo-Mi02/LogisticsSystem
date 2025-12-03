@@ -34,6 +34,10 @@ export async function POST(request: Request) {
         const { customerId, weight, origin, destination, urgency } = validation.data;
         console.log('Validated shipment data:', { customerId, weight, origin, destination, urgency });
         
+        // Determine transport mode based on urgency
+        // standard = TRUCK, high = DRONE, low = SHIP
+        const transportMode = urgency === 'low' ? 'SHIP' : urgency === 'high' ? 'DRONE' : 'TRUCK';
+        
         // Check if async queue is available
         if (isQueueAvailable()) {
             // ASYNC PATH: Create pending shipment and enqueue job
@@ -47,6 +51,7 @@ export async function POST(request: Request) {
                     trackingId,
                     weight,
                     status: 'PENDING',
+                    transportMode: transportMode,
                     originAddress: origin.address || null,
                     originCity: origin.city || null,
                     originCountry: origin.country || null,

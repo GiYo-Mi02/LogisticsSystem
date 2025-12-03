@@ -28,6 +28,7 @@ export const createShipmentSchema = z.object({
         { message: 'Destination must have city name or valid coordinates' }
     ),
     urgency: urgencySchema.default('standard'),
+    transportMode: z.enum(['DRONE', 'TRUCK', 'SHIP']).optional(),
 }).refine(
     (data) => {
         // Ensure origin and destination are different

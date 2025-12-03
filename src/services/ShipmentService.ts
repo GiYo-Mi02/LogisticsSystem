@@ -20,7 +20,7 @@ export class ShipmentService {
         const customer = await this.userService.getUserById(customerId);
         if (!customer) throw new Error('Customer not found');
 
-        // 2. Use Factory to create OOP Shipment & determine Vehicle/Strategy
+        // 2. Use Factory to calculate pricing and recommended transport mode
         const trackingId = 'TRK-' + Math.floor(Math.random() * 1000000);
         const { shipment, recommendedVehicle } = ShipmentFactory.createSimple(
             trackingId,
@@ -31,23 +31,16 @@ export class ShipmentService {
             urgency
         );
 
-        // 3. Persist Vehicle (if it doesn't exist, or find available one)
-        const vehicleRecord = await prisma.vehicle.create({
-            data: {
-                licenseId: recommendedVehicle.licenseId,
-                type: recommendedVehicle.type,
-                capacity: recommendedVehicle.capacity,
-                currentFuel: recommendedVehicle.currentFuel,
-                status: 'ASSIGNED',
-            },
-        });
-
-        // 4. Persist Shipment with full location data
+        // 3. Persist Shipment with full location data
+        // Determine transport mode from urgency: low = SHIP, high = DRONE, standard = TRUCK
+        const transportMode = urgency === 'low' ? 'SHIP' : urgency === 'high' ? 'DRONE' : 'TRUCK';
+        
         // Using type assertion to work around stale TypeScript cache
         const shipmentData: any = {
             trackingId: trackingId,
             weight: shipment.weight,
-            status: 'ASSIGNED',
+            status: 'PENDING', // Start as PENDING - driver needs to accept
+            transportMode: transportMode,
             // Origin location
             originAddress: origin.address || null,
             originCity: origin.city || null,
@@ -69,18 +62,15 @@ export class ShipmentService {
             data: shipmentData,
         });
 
-        // 5. Link Vehicle to Shipment
-        await prisma.vehicle.update({
-            where: { id: vehicleRecord.id },
-            data: { currentShipmentId: shipmentRecord.id }
-        });
+        // Don't link vehicle yet - driver will accept and get assigned a vehicle
 
-        // 6. Return formatted shipment data
+        // 4. Return formatted shipment data
         return {
             id: shipmentRecord.id,
             trackingId: shipmentRecord.trackingId,
             weight: shipmentRecord.weight,
             status: shipmentRecord.status,
+            transportMode: transportMode,
             origin: {
                 address: shipmentRecord.originAddress,
                 city: shipmentRecord.originCity,
@@ -92,11 +82,7 @@ export class ShipmentService {
                 country: shipmentRecord.destCountry,
             },
             cost: shipmentRecord.cost,
-            assignedVehicle: {
-                id: vehicleRecord.id,
-                type: vehicleRecord.type,
-                licenseId: vehicleRecord.licenseId,
-            },
+            recommendedVehicleType: recommendedVehicle.type, // Just the type, not assigned yet
             createdAt: shipmentRecord.createdAt,
         };
     }

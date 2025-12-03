@@ -73,7 +73,9 @@ export async function POST(request: Request) {
             throw new Error('Customer not found');
         }
         
-        // Use Factory to determine vehicle and pricing (the "slow" operation)
+        // Use Factory to determine vehicle TYPE and pricing (the "slow" operation)
+        // We calculate the cost and recommended vehicle type, but DON'T assign a vehicle yet
+        // The shipment stays PENDING until a driver accepts it
         const { shipment: oopShipment, recommendedVehicle } = ShipmentFactory.createSimple(
             existingShipment.trackingId,
             weight,
@@ -83,30 +85,14 @@ export async function POST(request: Request) {
             urgency
         );
         
-        // Create vehicle record
-        const vehicleRecord = await prisma.vehicle.create({
-            data: {
-                licenseId: recommendedVehicle.licenseId,
-                type: recommendedVehicle.type,
-                capacity: recommendedVehicle.capacity,
-                currentFuel: recommendedVehicle.currentFuel,
-                status: 'ASSIGNED',
-            },
-        });
-        
-        // Update shipment with calculated values
+        // Update shipment with calculated cost - but keep PENDING status
+        // The driver will accept the job and change status to ASSIGNED/IN_TRANSIT
         const updatedShipment = await prisma.shipment.update({
             where: { id: shipmentId },
             data: {
-                status: 'ASSIGNED',
+                status: 'PENDING', // Keep as PENDING - driver needs to accept
                 cost: oopShipment.cost,
             },
-        });
-        
-        // Link vehicle to shipment
-        await prisma.vehicle.update({
-            where: { id: vehicleRecord.id },
-            data: { currentShipmentId: shipmentId },
         });
         
         // Prepare result for SSE broadcast
@@ -126,11 +112,7 @@ export async function POST(request: Request) {
                 country: existingShipment.destCountry,
             },
             cost: updatedShipment.cost,
-            assignedVehicle: {
-                id: vehicleRecord.id,
-                type: vehicleRecord.type,
-                licenseId: vehicleRecord.licenseId,
-            },
+            recommendedVehicleType: recommendedVehicle.type, // Just the type, not assigned yet
             createdAt: updatedShipment.createdAt,
         };
         

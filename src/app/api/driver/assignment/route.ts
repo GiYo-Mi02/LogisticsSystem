@@ -48,11 +48,25 @@ export async function GET(request: Request) {
         const currentShipment = driver.currentVehicle?.currentShipment || driver.assignedJobs?.[0] || null;
 
         // Available jobs: PENDING or ASSIGNED shipments without a driver
+        // EXCLUDE shipments marked for SHIP transport (those go to Maritime Command)
         const availableJobs = await prisma.shipment.findMany({
             where: { 
                 OR: [
                     { status: 'PENDING' },
                     { status: 'ASSIGNED', driverId: null }
+                ],
+                // Exclude SHIP transport mode - those are for Maritime Command
+                NOT: {
+                    transportMode: 'SHIP'
+                },
+                // Also exclude heavy shipments (>1000kg) and international if no transport mode set
+                AND: [
+                    {
+                        OR: [
+                            { weight: { lt: 1000 } },
+                            { transportMode: { in: ['TRUCK', 'DRONE'] } }
+                        ]
+                    }
                 ]
             },
             include: { customer: true },

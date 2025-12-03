@@ -77,15 +77,20 @@ const vehicleIcons = {
     SHIP: (color: string) => L.divIcon({
         html: `
             <div style="position: relative;">
-                <svg width="36" height="36" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <circle cx="12" cy="12" r="10" fill="${color}" stroke="white" stroke-width="2"/>
-                    <path d="M12 6l-4 8h8l-4-8zm-1 10v2h2v-2h-2z" fill="white"/>
+                <svg width="40" height="40" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="12" cy="12" r="11" fill="${color}" stroke="white" stroke-width="2"/>
+                    <!-- Cargo Ship Icon -->
+                    <path d="M4 17l2-5h12l2 5" stroke="white" stroke-width="1.5" fill="none"/>
+                    <rect x="7" y="9" width="10" height="3" rx="0.5" fill="white"/>
+                    <rect x="8" y="6" width="3" height="3" rx="0.5" fill="white"/>
+                    <rect x="12" y="7" width="2" height="2" rx="0.3" fill="white"/>
+                    <path d="M3 18c1.5 1 3 1.5 4.5 1.5s3-.5 4.5-1.5c1.5 1 3 1.5 4.5 1.5s3-.5 4.5-1.5" stroke="white" stroke-width="1" fill="none" stroke-linecap="round"/>
                 </svg>
             </div>
         `,
         className: 'vehicle-marker ship',
-        iconSize: [36, 36],
-        iconAnchor: [18, 18],
+        iconSize: [40, 40],
+        iconAnchor: [20, 20],
     }),
 };
 

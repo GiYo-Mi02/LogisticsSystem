@@ -13,6 +13,10 @@ export async function GET() {
             where: { type: 'TRUCK', status: { not: 'MAINTENANCE' } }
         });
 
+        const activeShips = await prisma.vehicle.count({
+            where: { type: 'SHIP', status: { not: 'MAINTENANCE' } }
+        });
+
         const revenueResult = await prisma.shipment.aggregate({
             _sum: { cost: true }
         });
@@ -51,6 +55,7 @@ export async function GET() {
             totalShipments,
             activeDrones,
             activeTrucks,
+            activeShips,
             revenue: revenueResult._sum.cost || 0,
             vehicles,
             recentShipments
